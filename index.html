@@ -6,10 +6,8 @@
 <title>Backwaren-Planung — ELH · NST · OED</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
-
 *{box-sizing:border-box;}
 body{margin:0;}
 .font-sans{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
@@ -37,9 +35,9 @@ body{margin:0;}
 .grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr));}
 .grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}
 @media (min-width:640px){
-  .sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr));}
-  .sm\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .sm-grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .sm-grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .sm-grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr));}
 }
 .border{border-width:1px;border-style:solid;border-color:#e5e7eb;}
 .border-2{border-width:2px;border-style:solid;}
@@ -64,7 +62,7 @@ body{margin:0;}
 .text-xl{font-size:1.25rem;line-height:1.75rem;}
 .text-sm{font-size:0.875rem;line-height:1.25rem;}
 .text-xs{font-size:0.75rem;line-height:1rem;}
-.text-\[11px\]{font-size:11px;line-height:1rem;}
+.text-tiny{font-size:11px;line-height:1rem;}
 .h-4{height:1rem;}
 .w-4{width:1rem;}
 .opacity-60{opacity:0.6;}
@@ -72,1065 +70,696 @@ body{margin:0;}
 a{color:inherit;}
 button{cursor:pointer;font:inherit;}
 input{font:inherit;}
-
 .accent-amber-700{accent-color:#b45309;}
-.p-0.5{padding:0.125rem;}
-.px-0.5{padding-left:0.125rem;padding-right:0.125rem;}
-.py-0.5{padding-top:0.125rem;padding-bottom:0.125rem;}
-.pt-0.5{padding-top:0.125rem;}
-.pb-0.5{padding-bottom:0.125rem;}
-.m-0.5{margin:0.125rem;}
-.mx-0.5{margin-left:0.125rem;margin-right:0.125rem;}
-.mt-0.5{margin-top:0.125rem;}
-.mb-0.5{margin-bottom:0.125rem;}
-.ml-0.5{margin-left:0.125rem;}
-.gap-0.5{gap:0.125rem;}
-.space-y-0.5 > * + *{margin-top:0.125rem;}
-.p-1{padding:0.25rem;}
-.px-1{padding-left:0.25rem;padding-right:0.25rem;}
-.py-1{padding-top:0.25rem;padding-bottom:0.25rem;}
-.pt-1{padding-top:0.25rem;}
-.pb-1{padding-bottom:0.25rem;}
-.m-1{margin:0.25rem;}
-.mx-1{margin-left:0.25rem;margin-right:0.25rem;}
-.mt-1{margin-top:0.25rem;}
-.mb-1{margin-bottom:0.25rem;}
-.ml-1{margin-left:0.25rem;}
-.gap-1{gap:0.25rem;}
-.space-y-1 > * + *{margin-top:0.25rem;}
-.p-1.5{padding:0.375rem;}
-.px-1.5{padding-left:0.375rem;padding-right:0.375rem;}
-.py-1.5{padding-top:0.375rem;padding-bottom:0.375rem;}
-.pt-1.5{padding-top:0.375rem;}
-.pb-1.5{padding-bottom:0.375rem;}
-.m-1.5{margin:0.375rem;}
-.mx-1.5{margin-left:0.375rem;margin-right:0.375rem;}
-.mt-1.5{margin-top:0.375rem;}
-.mb-1.5{margin-bottom:0.375rem;}
-.ml-1.5{margin-left:0.375rem;}
-.gap-1.5{gap:0.375rem;}
-.space-y-1.5 > * + *{margin-top:0.375rem;}
-.p-2{padding:0.5rem;}
-.px-2{padding-left:0.5rem;padding-right:0.5rem;}
-.py-2{padding-top:0.5rem;padding-bottom:0.5rem;}
-.pt-2{padding-top:0.5rem;}
-.pb-2{padding-bottom:0.5rem;}
-.m-2{margin:0.5rem;}
-.mx-2{margin-left:0.5rem;margin-right:0.5rem;}
-.mt-2{margin-top:0.5rem;}
-.mb-2{margin-bottom:0.5rem;}
-.ml-2{margin-left:0.5rem;}
-.gap-2{gap:0.5rem;}
-.space-y-2 > * + *{margin-top:0.5rem;}
-.p-2.5{padding:0.625rem;}
-.px-2.5{padding-left:0.625rem;padding-right:0.625rem;}
-.py-2.5{padding-top:0.625rem;padding-bottom:0.625rem;}
-.pt-2.5{padding-top:0.625rem;}
-.pb-2.5{padding-bottom:0.625rem;}
-.m-2.5{margin:0.625rem;}
-.mx-2.5{margin-left:0.625rem;margin-right:0.625rem;}
-.mt-2.5{margin-top:0.625rem;}
-.mb-2.5{margin-bottom:0.625rem;}
-.ml-2.5{margin-left:0.625rem;}
-.gap-2.5{gap:0.625rem;}
-.space-y-2.5 > * + *{margin-top:0.625rem;}
-.p-3{padding:0.75rem;}
-.px-3{padding-left:0.75rem;padding-right:0.75rem;}
-.py-3{padding-top:0.75rem;padding-bottom:0.75rem;}
-.pt-3{padding-top:0.75rem;}
-.pb-3{padding-bottom:0.75rem;}
-.m-3{margin:0.75rem;}
-.mx-3{margin-left:0.75rem;margin-right:0.75rem;}
-.mt-3{margin-top:0.75rem;}
-.mb-3{margin-bottom:0.75rem;}
-.ml-3{margin-left:0.75rem;}
-.gap-3{gap:0.75rem;}
-.space-y-3 > * + *{margin-top:0.75rem;}
-.p-4{padding:1rem;}
-.px-4{padding-left:1rem;padding-right:1rem;}
-.py-4{padding-top:1rem;padding-bottom:1rem;}
-.pt-4{padding-top:1rem;}
-.pb-4{padding-bottom:1rem;}
-.m-4{margin:1rem;}
-.mx-4{margin-left:1rem;margin-right:1rem;}
-.mt-4{margin-top:1rem;}
-.mb-4{margin-bottom:1rem;}
-.ml-4{margin-left:1rem;}
-.gap-4{gap:1rem;}
-.space-y-4 > * + *{margin-top:1rem;}
-.p-6{padding:1.5rem;}
-.px-6{padding-left:1.5rem;padding-right:1.5rem;}
-.py-6{padding-top:1.5rem;padding-bottom:1.5rem;}
-.pt-6{padding-top:1.5rem;}
-.pb-6{padding-bottom:1.5rem;}
-.m-6{margin:1.5rem;}
-.mx-6{margin-left:1.5rem;margin-right:1.5rem;}
-.mt-6{margin-top:1.5rem;}
-.mb-6{margin-bottom:1.5rem;}
-.ml-6{margin-left:1.5rem;}
-.gap-6{gap:1.5rem;}
-.space-y-6 > * + *{margin-top:1.5rem;}
-.p-8{padding:2rem;}
-.px-8{padding-left:2rem;padding-right:2rem;}
-.py-8{padding-top:2rem;padding-bottom:2rem;}
-.pt-8{padding-top:2rem;}
-.pb-8{padding-bottom:2rem;}
-.m-8{margin:2rem;}
-.mx-8{margin-left:2rem;margin-right:2rem;}
-.mt-8{margin-top:2rem;}
-.mb-8{margin-bottom:2rem;}
-.ml-8{margin-left:2rem;}
-.gap-8{gap:2rem;}
-.space-y-8 > * + *{margin-top:2rem;}
-.p-10{padding:2.5rem;}
-.px-10{padding-left:2.5rem;padding-right:2.5rem;}
-.py-10{padding-top:2.5rem;padding-bottom:2.5rem;}
-.pt-10{padding-top:2.5rem;}
-.pb-10{padding-bottom:2.5rem;}
-.m-10{margin:2.5rem;}
-.mx-10{margin-left:2.5rem;margin-right:2.5rem;}
-.mt-10{margin-top:2.5rem;}
-.mb-10{margin-bottom:2.5rem;}
-.ml-10{margin-left:2.5rem;}
-.gap-10{gap:2.5rem;}
-.space-y-10 > * + *{margin-top:2.5rem;}
-.p-12{padding:3rem;}
-.px-12{padding-left:3rem;padding-right:3rem;}
-.py-12{padding-top:3rem;padding-bottom:3rem;}
-.pt-12{padding-top:3rem;}
-.pb-12{padding-bottom:3rem;}
-.m-12{margin:3rem;}
-.mx-12{margin-left:3rem;margin-right:3rem;}
-.mt-12{margin-top:3rem;}
-.mb-12{margin-bottom:3rem;}
-.ml-12{margin-left:3rem;}
-.gap-12{gap:3rem;}
-.space-y-12 > * + *{margin-top:3rem;}
-.p-28{padding:7rem;}
-.px-28{padding-left:7rem;padding-right:7rem;}
-.py-28{padding-top:7rem;padding-bottom:7rem;}
-.pt-28{padding-top:7rem;}
-.pb-28{padding-bottom:7rem;}
-.m-28{margin:7rem;}
-.mx-28{margin-left:7rem;margin-right:7rem;}
-.mt-28{margin-top:7rem;}
-.mb-28{margin-bottom:7rem;}
-.ml-28{margin-left:7rem;}
-.gap-28{gap:7rem;}
-.space-y-28 > * + *{margin-top:7rem;}
-.bg-stone-50{background-color:#fafaf9;}
-.text-stone-50{color:#fafaf9;}
-.border-stone-50{border-color:#fafaf9;}
-.bg-stone-100{background-color:#f5f5f4;}
-.text-stone-100{color:#f5f5f4;}
-.border-stone-100{border-color:#f5f5f4;}
-.bg-stone-200{background-color:#e7e5e4;}
-.text-stone-200{color:#e7e5e4;}
-.border-stone-200{border-color:#e7e5e4;}
-.bg-stone-300{background-color:#d6d3d1;}
-.text-stone-300{color:#d6d3d1;}
-.border-stone-300{border-color:#d6d3d1;}
-.bg-stone-400{background-color:#a8a29e;}
-.text-stone-400{color:#a8a29e;}
-.border-stone-400{border-color:#a8a29e;}
-.bg-stone-500{background-color:#78716c;}
-.text-stone-500{color:#78716c;}
-.border-stone-500{border-color:#78716c;}
-.bg-stone-600{background-color:#57534e;}
-.text-stone-600{color:#57534e;}
-.border-stone-600{border-color:#57534e;}
-.bg-stone-700{background-color:#44403c;}
-.text-stone-700{color:#44403c;}
-.border-stone-700{border-color:#44403c;}
-.bg-stone-800{background-color:#292524;}
-.text-stone-800{color:#292524;}
-.border-stone-800{border-color:#292524;}
-.bg-stone-900{background-color:#1c1917;}
-.text-stone-900{color:#1c1917;}
-.border-stone-900{border-color:#1c1917;}
-.bg-amber-50{background-color:#fffbeb;}
-.text-amber-50{color:#fffbeb;}
-.border-amber-50{border-color:#fffbeb;}
-.bg-amber-200{background-color:#fde68a;}
-.text-amber-200{color:#fde68a;}
-.border-amber-200{border-color:#fde68a;}
-.bg-amber-400{background-color:#fbbf24;}
-.text-amber-400{color:#fbbf24;}
-.border-amber-400{border-color:#fbbf24;}
-.bg-amber-600{background-color:#d97706;}
-.text-amber-600{color:#d97706;}
-.border-amber-600{border-color:#d97706;}
-.bg-amber-700{background-color:#b45309;}
-.text-amber-700{color:#b45309;}
-.border-amber-700{border-color:#b45309;}
-.bg-amber-800{background-color:#92400e;}
-.text-amber-800{color:#92400e;}
-.border-amber-800{border-color:#92400e;}
-.bg-amber-900{background-color:#78350f;}
-.text-amber-900{color:#78350f;}
-.border-amber-900{border-color:#78350f;}
-.bg-emerald-300{background-color:#6ee7b7;}
-.text-emerald-300{color:#6ee7b7;}
-.border-emerald-300{border-color:#6ee7b7;}
-.bg-emerald-50{background-color:#ecfdf5;}
-.text-emerald-50{color:#ecfdf5;}
-.border-emerald-50{border-color:#ecfdf5;}
-.bg-emerald-700{background-color:#047857;}
-.text-emerald-700{color:#047857;}
-.border-emerald-700{border-color:#047857;}
-.bg-emerald-800{background-color:#065f46;}
-.text-emerald-800{color:#065f46;}
-.border-emerald-800{border-color:#065f46;}
-.bg-emerald-900{background-color:#064e3b;}
-.text-emerald-900{color:#064e3b;}
-.border-emerald-900{border-color:#064e3b;}
-.bg-red-50{background-color:#fef2f2;}
-.text-red-50{color:#fef2f2;}
-.border-red-50{border-color:#fef2f2;}
-.bg-red-200{background-color:#fecaca;}
-.text-red-200{color:#fecaca;}
-.border-red-200{border-color:#fecaca;}
-.bg-red-300{background-color:#fca5a5;}
-.text-red-300{color:#fca5a5;}
-.border-red-300{border-color:#fca5a5;}
-.bg-red-800{background-color:#991b1b;}
-.text-red-800{color:#991b1b;}
-.border-red-800{border-color:#991b1b;}
-.bg-red-900{background-color:#7f1d1d;}
-.text-red-900{color:#7f1d1d;}
-.border-red-900{border-color:#7f1d1d;}
-.bg-white{background-color:#ffffff;}
-.hover\:bg-amber-800:hover{background-color:#92400e;}
-.hover\:bg-stone-50:hover{background-color:#fafaf9;}
-.hover\:text-stone-800:hover{color:#292524;}
-.disabled\:bg-stone-100:disabled{background-color:#f5f5f4;}
-.disabled\:text-stone-400:disabled{color:#a8a29e;}
-
 </style>
 </head>
 <body>
 <div id="root">
-  <div style="max-width:640px;margin:60px auto;padding:20px;font-family:sans-serif;color:#57534e;">
-    Lädt…
-  </div>
+  <div style="max-width:640px;margin:60px auto;padding:20px;font-family:sans-serif;color:#57534e;">Lädt…</div>
 </div>
 
 <script>
-  // Sichtbare Diagnose: falls die App nach 6 Sekunden immer noch nicht gerendert hat
-  // (z. B. weil eine externe Bibliothek blockiert wurde), zeigen wir direkt auf der
-  // Seite an, was fehlt — statt eines stillen weißen Bildschirms.
-  window.addEventListener("error", function (e) {
-    window.__lastError = (e && e.message) || String(e);
-  });
-  setTimeout(function () {
-    const root = document.getElementById("root");
-    if (!root || root.getAttribute("data-mounted") === "true") return;
-    const checks = [
-      ["React", typeof window.React !== "undefined"],
-      ["ReactDOM", typeof window.ReactDOM !== "undefined"],
-      ["Babel", typeof window.Babel !== "undefined"],
-      ["XLSX", typeof window.XLSX !== "undefined"],
-    ];
-    const missing = checks.filter(([, ok]) => !ok).map(([name]) => name);
-    root.innerHTML =
-      '<div style="max-width:640px;margin:60px auto;padding:20px;font-family:sans-serif;' +
-      'border:1px solid #fca5a5;background:#fef2f2;color:#7f1d1d;border-radius:8px;">' +
-      "<strong>Die Seite konnte nicht vollständig laden.</strong><br/><br/>" +
-      (missing.length
-        ? "Diese Komponenten wurden nicht geladen: " + missing.join(", ") +
-          ". Meist liegt das an einem Werbe-/Skriptblocker, Firmen-Firewall oder fehlender Internetverbindung " +
-          "zu unpkg.com / cdn.sheetjs.com / cdn.tailwindcss.com."
-        : "Alle Bibliotheken sind geladen, es gab aber einen Fehler beim Start der App" +
-          (window.__lastError ? ": " + window.__lastError : ".")) +
-      "<br/><br/>Bitte Seite neu laden, ggf. Blocker kurz deaktivieren." +
-      "</div>";
-  }, 6000);
-</script>
+(function () {
+  "use strict";
 
-<script type="text/babel" data-presets="react">
-const { useState, useCallback, useMemo, useRef } = React;
+  // ==========================================================================
+  // Hilfsfunktion: kurze Notation statt JSX (kein Babel/Transform zur Laufzeit
+  // nötig — läuft als ganz normales, unauffälliges JavaScript in jedem Browser)
+  // ==========================================================================
+  var h = React.createElement;
+  var useState = React.useState;
+  var useCallback = React.useCallback;
+  var useMemo = React.useMemo;
+  var useRef = React.useRef;
 
-// ---------------------------------------------------------------------------
-// Kleine Inline-Icons (statt einer externen Icon-Bibliothek, damit die App
-// ohne zusätzliche Abhängigkeit als einzelne Datei läuft)
-// ---------------------------------------------------------------------------
-function Icon({ path, size = 16, className = "" }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d={path} />
-    </svg>
-  );
-}
-const IconUpload = (p) => <Icon {...p} path="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />;
-const IconCheck = (p) => <Icon {...p} path="M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3" />;
-const IconAlert = (p) => <Icon {...p} path="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" />;
-const IconChevronDown = (p) => <Icon {...p} path="M6 9l6 6 6-6" />;
-const IconChevronRight = (p) => <Icon {...p} path="M9 18l6-6-6-6" />;
-const IconDownload = (p) => <Icon {...p} path="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />;
-const IconReset = (p) => <Icon {...p} path="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8M3 3v5h5" />;
-const IconInfo = (p) => <Icon {...p} path="M12 16v-4M12 8h.01M22 12a10 10 0 11-20 0 10 10 0 0120 0z" />;
-const IconSheet = (p) => <Icon {...p} path="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h6M9 17h6" />;
+  // Utility-Klassen inline erzeugen (Ersatz für Tailwind, ohne externe Abhängigkeit)
+  var SP = {"0.5":"0.125rem","1":"0.25rem","1.5":"0.375rem","2":"0.5rem","2.5":"0.625rem","3":"0.75rem","4":"1rem","6":"1.5rem","8":"2rem","10":"2.5rem","12":"3rem","28":"7rem"};
+  var STONE = {50:"#fafaf9",100:"#f5f5f4",200:"#e7e5e4",300:"#d6d3d1",400:"#a8a29e",500:"#78716c",600:"#57534e",700:"#44403c",800:"#292524",900:"#1c1917"};
+  var AMBER = {50:"#fffbeb",200:"#fde68a",400:"#fbbf24",600:"#d97706",700:"#b45309",800:"#92400e",900:"#78350f"};
+  var EMERALD = {50:"#ecfdf5",300:"#6ee7b7",700:"#047857",800:"#065f46",900:"#064e3b"};
+  var RED = {50:"#fef2f2",200:"#fecaca",300:"#fca5a5",800:"#991b1b",900:"#7f1d1d"};
 
-// ---------------------------------------------------------------------------
-// Hilfsfunktionen: Normalisierung & Fuzzy-Matching
-// ---------------------------------------------------------------------------
-
-function transliterate(s) {
-  return String(s || "")
-    .toUpperCase()
-    .replace(/Ä/g, "AE")
-    .replace(/Ö/g, "OE")
-    .replace(/Ü/g, "UE")
-    .replace(/ß/g, "SS")
-    .replace(/[.,\-_/]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function levenshtein(a, b) {
-  const m = a.length, n = b.length;
-  if (m === 0) return n;
-  if (n === 0) return m;
-  const dp = new Array(n + 1);
-  for (let j = 0; j <= n; j++) dp[j] = j;
-  for (let i = 1; i <= m; i++) {
-    let prev = dp[0];
-    dp[0] = i;
-    for (let j = 1; j <= n; j++) {
-      const tmp = dp[j];
-      dp[j] = Math.min(
-        dp[j] + 1,
-        dp[j - 1] + 1,
-        prev + (a[i - 1] === b[j - 1] ? 0 : 1)
-      );
-      prev = tmp;
-    }
-  }
-  return dp[n];
-}
-
-function similarity(a, b) {
-  const maxLen = Math.max(a.length, b.length);
-  if (maxLen === 0) return 1;
-  return 1 - levenshtein(a, b) / maxLen;
-}
-
-function extractTrailingQuantity(name) {
-  const m = String(name).trim().match(/(\d+(?:[.,]\d+)?)\s*(KG|G|ML|L)$/);
-  if (!m) return null;
-  return { value: parseFloat(m[1].replace(",", ".")), unit: m[2] };
-}
-
-function parseGermanDate(str) {
-  if (!str || typeof str !== "string") return null;
-  const m = str.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  if (!m) return null;
-  const [, d, mo, y] = m;
-  const date = new Date(Number(y), Number(mo) - 1, Number(d));
-  if (isNaN(date.getTime())) return null;
-  return date;
-}
-
-const METRIC_KEY_MAP = {
-  "umsatz": "umsatz",
-  "umsatz vj": "umsatzVj",
-  "menge": "menge",
-  "abschriften vk [br]": "abschriften",
-  "abschriften vk [br] vj": "abschriftenVj",
-};
-
-// ---------------------------------------------------------------------------
-// Kern: Kreuztabelle parsen
-// ---------------------------------------------------------------------------
-
-function parseKreuztabelle(aoa) {
-  const warnings = [];
-  if (!aoa || aoa.length < 5) {
-    throw new Error("Datei enthält weniger als 5 Zeilen — keine gültige Kreuztabelle.");
-  }
-  const rowMonat = aoa[0] || [];
-  const rowWoche = aoa[1] || [];
-  const rowTag = aoa[2] || [];
-  const rowMetric = aoa[3] || [];
-
-  const findCol = (label) =>
-    rowMetric.findIndex((v) => String(v || "").trim().toLowerCase() === label);
-  const colMarkt = findCol("markt");
-  const colOwg = findCol("oberwarengrp.");
-  const colWg = findCol("warengr.");
-  const colArtikelNr = findCol("artikel");
-  const colGtin = findCol("gtin");
-  const colArtikelName = colArtikelNr + 1;
-
-  if (colMarkt < 0 || colOwg < 0 || colWg < 0 || colArtikelNr < 0) {
-    throw new Error(
-      "Erwartete Spalten (Markt / Oberwarengrp. / Warengr. / Artikel) wurden in Zeile 4 nicht gefunden. " +
-      "Ist das wirklich das Blatt 'Kreuztabelle' aus dem SAP-Umsatzbericht?"
-    );
-  }
-  if (colGtin >= 0 && colArtikelName !== colGtin) {
-    warnings.push(
-      "Die Spalte mit dem Artikelnamen liegt nicht direkt vor 'GTIN' wie im bekannten Exportformat erwartet " +
-      "— Artikelnamen könnten falsch zugeordnet sein, bitte Stichprobe prüfen."
-    );
-  }
-
-  const firstBlockCol = Math.max(colGtin >= 0 ? colGtin : colArtikelName, colArtikelName) + 1;
-  const blocks = [];
-  for (let c = firstBlockCol; c < rowMetric.length; c += 5) {
-    const monat = rowMonat[c] ?? null;
-    const woche = rowWoche[c] ?? null;
-    const tag = rowTag[c] ?? null;
-    const metricLabels = [0, 1, 2, 3, 4].map((k) => String(rowMetric[c + k] || "").trim().toLowerCase());
-    const unknown = metricLabels.filter((l) => l && !(l in METRIC_KEY_MAP));
-    if (unknown.length) warnings.push(`Unerwartete Metrik-Spaltennamen ab Spalte ${c + 1}: ${unknown.join(", ")}`);
-
-    let type = "UNBEKANNT";
-    let date = null;
-    if (woche == null && tag == null) type = "GESAMT";
-    else if (tag == null) type = "MONAT_SUMME";
-    else if (String(tag).trim().toLowerCase() === "ergebnis") type = "WOCHEN_SUMME";
-    else {
-      date = parseGermanDate(String(tag));
-      type = date ? "TAG" : "UNBEKANNT";
-    }
-    blocks.push({ col: c, monat, woche, tag, type, date });
-  }
-
-  const tagesBloecke = blocks.filter((b) => b.type === "TAG");
-  const dates = tagesBloecke.map((b) => b.date).filter((d) => d != null);
-  const years = [...new Set(dates.map((d) => d.getFullYear()))].sort();
-  const minDate = dates.length ? new Date(Math.min(...dates.map((d) => d.getTime()))) : null;
-  const maxDate = dates.length ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
-  const wochenNummern = [...new Set(blocks.filter((b) => b.woche != null && b.type !== "GESAMT").map((b) => String(b.woche)))];
-
-  const markets = new Map();
-  let leafCount = 0;
-  let subtotalCount = 0;
-  let maskedMengeCount = 0;
-  const leafRows = [];
-
-  for (let r = 4; r < aoa.length; r++) {
-    const row = aoa[r];
-    if (!row) continue;
-    const markt = row[colMarkt];
-    if (markt == null || String(markt).trim() === "") continue;
-    const owg = row[colOwg] ?? null;
-    const wg = row[colWg] ?? null;
-    const artikelNr = row[colArtikelNr] ?? null;
-    const artikelName = row[colArtikelName] ?? null;
-    const gtin = colGtin >= 0 ? row[colGtin] ?? null : null;
-
-    if (artikelName == null || String(artikelName).trim() === "") {
-      subtotalCount++;
-      continue;
-    }
-    leafCount++;
-    markets.set(String(markt), (markets.get(String(markt)) || 0) + 1);
-
-    for (const b of blocks) {
-      if (b.type === "GESAMT") continue;
-      const mengeIdx = [0, 1, 2, 3, 4].findIndex(
-        (k) => String(rowMetric[b.col + k] || "").trim().toLowerCase() === "menge"
-      );
-      if (mengeIdx < 0) continue;
-      const val = row[b.col + mengeIdx];
-      if (val === "*") maskedMengeCount++;
-    }
-
-    leafRows.push({
-      rowIndex: r,
-      markt: String(markt).trim(),
-      owg: owg != null ? String(owg).trim() : "",
-      wg: wg != null ? String(wg).trim() : "",
-      artikel: String(artikelName).trim(),
-      artikelnummer: artikelNr != null ? String(artikelNr).trim() : "",
-      gtin,
+  function styleFromClass(tokens) {
+    var s = {};
+    tokens.forEach(function (t) {
+      var hover = false, disabled = false;
+      if (t.indexOf("hover:") === 0) { hover = true; t = t.slice(6); }
+      if (t.indexOf("disabled:") === 0) { disabled = true; t = t.slice(9); }
+      if (hover || disabled) return; // Hover-/Disabled-Varianten werden unten separat per CSS-Klasse gehandhabt
+      var m;
+      if ((m = t.match(/^bg-(stone|amber|emerald|red)-(\d+)$/))) { s.backgroundColor = ({stone:STONE,amber:AMBER,emerald:EMERALD,red:RED})[m[1]][m[2]]; return; }
+      if (t === "bg-white") { s.backgroundColor = "#ffffff"; return; }
+      if ((m = t.match(/^text-(stone|amber|emerald|red)-(\d+)$/))) { s.color = ({stone:STONE,amber:AMBER,emerald:EMERALD,red:RED})[m[1]][m[2]]; return; }
+      if ((m = t.match(/^border-(stone|amber|emerald|red)-(\d+)$/))) { s.borderColor = ({stone:STONE,amber:AMBER,emerald:EMERALD,red:RED})[m[1]][m[2]]; return; }
+      if ((m = t.match(/^(p|px|py|pt|pb|m|mx|mt|mb|ml|gap)-([\d.]+)$/))) {
+        var v = SP[m[2]] || (parseFloat(m[2]) * 0.25 + "rem");
+        var prop = m[1];
+        if (prop === "p") s.padding = v;
+        else if (prop === "px") { s.paddingLeft = v; s.paddingRight = v; }
+        else if (prop === "py") { s.paddingTop = v; s.paddingBottom = v; }
+        else if (prop === "pt") s.paddingTop = v;
+        else if (prop === "pb") s.paddingBottom = v;
+        else if (prop === "m") s.margin = v;
+        else if (prop === "mx") { s.marginLeft = v; s.marginRight = v; }
+        else if (prop === "mt") s.marginTop = v;
+        else if (prop === "mb") s.marginBottom = v;
+        else if (prop === "ml") s.marginLeft = v;
+        else if (prop === "gap") s.gap = v;
+        return;
+      }
     });
+    return s;
   }
 
-  return {
-    warnings, blocks, tagesBloecke, years, minDate, maxDate, wochenNummern,
-    markets: [...markets.entries()].map(([name, count]) => ({ name, count })),
-    leafCount, subtotalCount, maskedMengeCount,
-    totalDataRows: aoa.length - 4, leafRows,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Phase 1: Masterprodukt-Clustering
-// ---------------------------------------------------------------------------
-
-function buildClusters(leafRows) {
-  const exactGroups = new Map();
-  for (const row of leafRows) {
-    const norm = transliterate(row.artikel);
-    if (!exactGroups.has(norm)) exactGroups.set(norm, { originals: new Map(), owgwg: new Map() });
-    const g = exactGroups.get(norm);
-    if (!g.originals.has(row.artikel)) g.originals.set(row.artikel, { count: 0, nrs: new Set() });
-    const o = g.originals.get(row.artikel);
-    o.count += 1;
-    if (row.artikelnummer) o.nrs.add(row.artikelnummer);
-    const key = `${row.owg}||${row.wg}`;
-    g.owgwg.set(key, (g.owgwg.get(key) || 0) + 1);
+  // className bleibt als Klassenliste erhalten (für die generischen Layout-Klassen
+  // aus dem <style>-Block), plus inline berechnete Farb-/Abstandswerte obendrauf.
+  function cx(str) {
+    var tokens = String(str || "").split(/\s+/).filter(Boolean);
+    var cls = tokens.filter(function (t) {
+      return !/^(bg|text|border)-(stone|amber|emerald|red)-\d+$/.test(t) &&
+             !/^(p|px|py|pt|pb|m|mx|mt|mb|ml|gap)-[\d.]+$/.test(t) &&
+             t !== "bg-white";
+    }).map(function (t) {
+      if (t.indexOf("sm:") === 0) return "sm-" + t.slice(3);
+      if (t === "text-[11px]") return "text-tiny";
+      return t;
+    }).join(" ");
+    return { className: cls, style: styleFromClass(tokens) };
   }
 
-  const normNames = [...exactGroups.keys()];
-  const buckets = new Map();
-  for (const n of normNames) {
-    const key = n.slice(0, 3);
-    if (!buckets.has(key)) buckets.set(key, []);
-    buckets.get(key).push(n);
+  // ==========================================================================
+  // Kleine Inline-Icons
+  // ==========================================================================
+  function Icon(p) {
+    return h("svg", { width: p.size || 16, height: p.size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: p.className || "" },
+      h("path", { d: p.path }));
   }
+  function IconUpload(p) { return h(Icon, Object.assign({}, p, { path: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" })); }
+  function IconCheck(p) { return h(Icon, Object.assign({}, p, { path: "M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3" })); }
+  function IconAlert(p) { return h(Icon, Object.assign({}, p, { path: "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" })); }
+  function IconChevronDown(p) { return h(Icon, Object.assign({}, p, { path: "M6 9l6 6 6-6" })); }
+  function IconChevronRight(p) { return h(Icon, Object.assign({}, p, { path: "M9 18l6-6-6-6" })); }
+  function IconDownload(p) { return h(Icon, Object.assign({}, p, { path: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" })); }
+  function IconReset(p) { return h(Icon, Object.assign({}, p, { path: "M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8M3 3v5h5" })); }
+  function IconInfo(p) { return h(Icon, Object.assign({}, p, { path: "M12 16v-4M12 8h.01M22 12a10 10 0 11-20 0 10 10 0 0120 0z" })); }
+  function IconSheet(p) { return h(Icon, Object.assign({}, p, { path: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h6M9 17h6" })); }
 
-  const parent = new Map(normNames.map((n) => [n, n]));
-  function find(x) {
-    while (parent.get(x) !== x) {
-      parent.set(x, parent.get(parent.get(x)));
-      x = parent.get(x);
-    }
-    return x;
+  // ==========================================================================
+  // Hilfsfunktionen: Normalisierung & Fuzzy-Matching
+  // ==========================================================================
+  function transliterate(s) {
+    return String(s || "").toUpperCase()
+      .replace(/Ä/g, "AE").replace(/Ö/g, "OE").replace(/Ü/g, "UE").replace(/ß/g, "SS")
+      .replace(/[.,\-_/]/g, " ").replace(/\s+/g, " ").trim();
   }
-  function union(a, b) {
-    const ra = find(a), rb = find(b);
-    if (ra !== rb) parent.set(ra, rb);
-  }
-
-  const SIM_THRESHOLD = 0.86;
-  const excludedByWeight = [];
-  for (const list of buckets.values()) {
-    for (let i = 0; i < list.length; i++) {
-      for (let j = i + 1; j < list.length; j++) {
-        if (list[i] === list[j]) continue;
-        const sim = similarity(list[i], list[j]);
-        if (sim < SIM_THRESHOLD) continue;
-        const qa = extractTrailingQuantity(list[i]);
-        const qb = extractTrailingQuantity(list[j]);
-        if (qa && qb && qa.value !== qb.value) {
-          excludedByWeight.push({ a: list[i], b: list[j], sim: Math.round(sim * 100) / 100 });
-          continue;
-        }
-        union(list[i], list[j]);
+  function levenshtein(a, b) {
+    var m = a.length, n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    var dp = new Array(n + 1);
+    for (var j = 0; j <= n; j++) dp[j] = j;
+    for (var i = 1; i <= m; i++) {
+      var prev = dp[0];
+      dp[0] = i;
+      for (j = 1; j <= n; j++) {
+        var tmp = dp[j];
+        dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+        prev = tmp;
       }
     }
+    return dp[n];
   }
-
-  const merged = new Map();
-  for (const n of normNames) {
-    const root = find(n);
-    if (!merged.has(root)) merged.set(root, { originals: new Map(), owgwg: new Map(), normVariants: new Set() });
-    const target = merged.get(root);
-    const src = exactGroups.get(n);
-    target.normVariants.add(n);
-    for (const [o, info] of src.originals) {
-      if (!target.originals.has(o)) target.originals.set(o, { count: 0, nrs: new Set() });
-      const t = target.originals.get(o);
-      t.count += info.count;
-      for (const nr of info.nrs) t.nrs.add(nr);
-    }
-    for (const [k, c] of src.owgwg) target.owgwg.set(k, (target.owgwg.get(k) || 0) + c);
+  function similarity(a, b) {
+    var maxLen = Math.max(a.length, b.length);
+    if (maxLen === 0) return 1;
+    return 1 - levenshtein(a, b) / maxLen;
   }
-
-  const candidates = [];
-  let id = 0;
-  for (const [root, g] of merged.entries()) {
-    const originalsSorted = [...g.originals.entries()].sort((a, b) => b[1].count - a[1].count);
-    const owgwgSorted = [...g.owgwg.entries()].sort((a, b) => b[1] - a[1]);
-    const hasSpellingVariants = originalsSorted.length > 1;
-    const hasOwgWgConflict = owgwgSorted.length > 1;
-    if (!hasSpellingVariants && !hasOwgWgConflict) continue;
-
-    const [suggName] = originalsSorted[0];
-    const [suggKey] = owgwgSorted[0];
-    const [suggOwg, suggWg] = suggKey.split("||");
-
-    let conflictType = "SPELLING";
-    if (hasSpellingVariants && hasOwgWgConflict) conflictType = "BOTH";
-    else if (hasOwgWgConflict) conflictType = "OWGWG";
-
-    const accepted = conflictType === "OWGWG";
-
-    candidates.push({
-      id: id++,
-      variants: originalsSorted.map(([name, info]) => ({ name, count: info.count, nrs: [...info.nrs] })),
-      owgwgOptions: owgwgSorted.map(([key, count]) => {
-        const [owg, wg] = key.split("||");
-        return { owg, wg, count };
-      }),
-      suggestedName: suggName, suggestedOwg: suggOwg, suggestedWg: suggWg,
-      conflictType, accepted,
-      editedName: suggName, editedOwg: suggOwg, editedWg: suggWg,
-    });
+  function extractTrailingQuantity(name) {
+    var m = String(name).trim().match(/(\d+(?:[.,]\d+)?)\s*(KG|G|ML|L)$/);
+    if (!m) return null;
+    return { value: parseFloat(m[1].replace(",", ".")), unit: m[2] };
   }
+  function parseGermanDate(str) {
+    if (!str || typeof str !== "string") return null;
+    var m = str.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (!m) return null;
+    var d = m[1], mo = m[2], y = m[3];
+    var date = new Date(Number(y), Number(mo) - 1, Number(d));
+    if (isNaN(date.getTime())) return null;
+    return date;
+  }
+  var METRIC_KEY_MAP = { "umsatz": "umsatz", "umsatz vj": "umsatzVj", "menge": "menge", "abschriften vk [br]": "abschriften", "abschriften vk [br] vj": "abschriftenVj" };
 
-  candidates.sort((a, b) => {
-    const totalA = a.variants.reduce((s, v) => s + v.count, 0);
-    const totalB = b.variants.reduce((s, v) => s + v.count, 0);
-    return totalB - totalA;
-  });
+  // ==========================================================================
+  // Kern: Kreuztabelle parsen
+  // ==========================================================================
+  function parseKreuztabelle(aoa) {
+    var warnings = [];
+    if (!aoa || aoa.length < 5) throw new Error("Datei enthält weniger als 5 Zeilen — keine gültige Kreuztabelle.");
+    var rowMonat = aoa[0] || [], rowWoche = aoa[1] || [], rowTag = aoa[2] || [], rowMetric = aoa[3] || [];
 
-  return {
-    candidates,
-    totalDistinct: normNames.length,
-    totalClustersAfterMerge: merged.size,
-    excludedByWeight,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Export: bereinigte Zuordnung + Entscheidungen als .xlsx
-// ---------------------------------------------------------------------------
-
-function exportXlsx(leafRows, candidates) {
-  const nameOverride = new Map();
-  const owgWgOverride = new Map();
-
-  for (const c of candidates) {
-    if (!c.accepted) continue;
-    for (const v of c.variants) {
-      nameOverride.set(v.name, c.editedName);
-      if (c.conflictType === "OWGWG" || c.conflictType === "BOTH") {
-        owgWgOverride.set(v.name, { owg: c.editedOwg, wg: c.editedWg });
+    function findCol(label) {
+      for (var i = 0; i < rowMetric.length; i++) {
+        if (String(rowMetric[i] || "").trim().toLowerCase() === label) return i;
       }
+      return -1;
     }
-  }
+    var colMarkt = findCol("markt"), colOwg = findCol("oberwarengrp."), colWg = findCol("warengr.");
+    var colArtikelNr = findCol("artikel"), colGtin = findCol("gtin");
+    var colArtikelName = colArtikelNr + 1;
 
-  const bereinigungHeader = [
-    "Originalbezeichnung", "Oberwarengruppe (Original)", "Warengruppe (Original)",
-    "Masterprodukt (bereinigt)", "Oberwarengruppe (final)", "Warengruppe (final)", "GTIN",
-  ];
-  const bereinigungRows = leafRows.map((r) => {
-    const finalName = nameOverride.get(r.artikel) || r.artikel;
-    const ow = owgWgOverride.get(r.artikel);
-    return [
-      r.artikel, r.owg, r.wg, finalName,
-      ow ? ow.owg : r.owg, ow ? ow.wg : r.wg, r.gtin ?? "",
-    ];
-  });
+    if (colMarkt < 0 || colOwg < 0 || colWg < 0 || colArtikelNr < 0) {
+      throw new Error("Erwartete Spalten (Markt / Oberwarengrp. / Warengr. / Artikel) wurden in Zeile 4 nicht gefunden. Ist das wirklich das Blatt 'Kreuztabelle' aus dem SAP-Umsatzbericht?");
+    }
+    if (colGtin >= 0 && colArtikelName !== colGtin) {
+      warnings.push("Die Spalte mit dem Artikelnamen liegt nicht direkt vor 'GTIN' wie im bekannten Exportformat erwartet — Artikelnamen könnten falsch zugeordnet sein, bitte Stichprobe prüfen.");
+    }
 
-  const entscheidungenHeader = [
-    "Paar-Schlüssel", "Varianten (Original)", "Konflikttyp", "Übernommen",
-    "Zielprodukt", "Ziel-Oberwarengruppe", "Ziel-Warengruppe", "Gespeichert am",
-  ];
-  const now = new Date();
-  const timestamp = now.toISOString().slice(0, 19).replace("T", " ");
-  const entscheidungenRows = candidates.map((c) => [
-    c.variants.map((v) => v.name).join("||"),
-    c.variants.map((v) => `${v.name} (${v.count})`).join(" / "),
-    c.conflictType,
-    c.accepted ? "JA" : "NEIN",
-    c.editedName, c.editedOwg, c.editedWg, timestamp,
-  ]);
+    var firstBlockCol = Math.max(colGtin >= 0 ? colGtin : colArtikelName, colArtikelName) + 1;
+    var blocks = [];
+    for (var c = firstBlockCol; c < rowMetric.length; c += 5) {
+      var monat = rowMonat[c] != null ? rowMonat[c] : null;
+      var woche = rowWoche[c] != null ? rowWoche[c] : null;
+      var tag = rowTag[c] != null ? rowTag[c] : null;
+      var metricLabels = [0, 1, 2, 3, 4].map(function (k) { return String(rowMetric[c + k] || "").trim().toLowerCase(); });
+      var unknown = metricLabels.filter(function (l) { return l && !(l in METRIC_KEY_MAP); });
+      if (unknown.length) warnings.push("Unerwartete Metrik-Spaltennamen ab Spalte " + (c + 1) + ": " + unknown.join(", "));
 
-  const wb = XLSX.utils.book_new();
-  const ws1 = XLSX.utils.aoa_to_sheet([bereinigungHeader, ...bereinigungRows]);
-  const ws2 = XLSX.utils.aoa_to_sheet([entscheidungenHeader, ...entscheidungenRows]);
-  ws1["!cols"] = [{ wch: 32 }, { wch: 24 }, { wch: 24 }, { wch: 32 }, { wch: 24 }, { wch: 24 }, { wch: 14 }];
-  ws2["!cols"] = [{ wch: 40 }, { wch: 45 }, { wch: 12 }, { wch: 11 }, { wch: 30 }, { wch: 24 }, { wch: 24 }, { wch: 18 }];
-  XLSX.utils.book_append_sheet(wb, ws1, "Masterprodukte");
-  XLSX.utils.book_append_sheet(wb, ws2, "Produktentscheidungen");
+      var type = "UNBEKANNT", date = null;
+      if (woche == null && tag == null) type = "GESAMT";
+      else if (tag == null) type = "MONAT_SUMME";
+      else if (String(tag).trim().toLowerCase() === "ergebnis") type = "WOCHEN_SUMME";
+      else { date = parseGermanDate(String(tag)); type = date ? "TAG" : "UNBEKANNT"; }
+      blocks.push({ col: c, monat: monat, woche: woche, tag: tag, type: type, date: date });
+    }
 
-  const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([out], { type: "application/octet-stream" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "Bereinigung_Phase1.xlsx";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+    var tagesBloecke = blocks.filter(function (b) { return b.type === "TAG"; });
+    var dates = tagesBloecke.map(function (b) { return b.date; }).filter(function (d) { return d != null; });
+    var years = Array.from(new Set(dates.map(function (d) { return d.getFullYear(); }))).sort();
+    var minDate = dates.length ? new Date(Math.min.apply(null, dates.map(function (d) { return d.getTime(); }))) : null;
+    var maxDate = dates.length ? new Date(Math.max.apply(null, dates.map(function (d) { return d.getTime(); }))) : null;
+    var wochenNummern = Array.from(new Set(blocks.filter(function (b) { return b.woche != null && b.type !== "GESAMT"; }).map(function (b) { return String(b.woche); })));
 
-// ---------------------------------------------------------------------------
-// UI
-// ---------------------------------------------------------------------------
+    var markets = new Map();
+    var leafCount = 0, subtotalCount = 0, maskedMengeCount = 0;
+    var leafRows = [];
 
-const PHASES = [
-  { n: 0, label: "Upload" },
-  { n: 1, label: "Bereinigung" },
-  { n: 2, label: "Mengenschätzung" },
-  { n: 3, label: "Tagesbasis" },
-  { n: 4, label: "Forecast" },
-  { n: 5, label: "Portfolio" },
-  { n: 6, label: "Produktionsplan" },
-  { n: 7, label: "Bestellung" },
-  { n: 8, label: "Export" },
-];
+    for (var r = 4; r < aoa.length; r++) {
+      var row = aoa[r];
+      if (!row) continue;
+      var markt = row[colMarkt];
+      if (markt == null || String(markt).trim() === "") continue;
+      var owg = row[colOwg] != null ? row[colOwg] : null;
+      var wg = row[colWg] != null ? row[colWg] : null;
+      var artikelNr = row[colArtikelNr] != null ? row[colArtikelNr] : null;
+      var artikelName = row[colArtikelName] != null ? row[colArtikelName] : null;
+      var gtin = colGtin >= 0 ? (row[colGtin] != null ? row[colGtin] : null) : null;
 
-function fmtDate(d) {
-  if (!d) return "—";
-  return d.toLocaleDateString("de-DE");
-}
+      if (artikelName == null || String(artikelName).trim() === "") { subtotalCount++; continue; }
+      leafCount++;
+      markets.set(String(markt), (markets.get(String(markt)) || 0) + 1);
 
-function StepDots({ active }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {PHASES.map((p) => {
-        const isActive = p.n === active;
-        const isDone = p.n < active;
-        return (
-          <div key={p.n} className={
-            "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-mono border " +
-            (isActive ? "bg-amber-700 border-amber-800 text-amber-50"
-              : isDone ? "bg-stone-800 border-stone-800 text-stone-100"
-              : "bg-stone-100 border-stone-300 text-stone-400")
-          }>
-            <span className="font-bold">{String(p.n).padStart(2, "0")}</span>
-            <span>{p.label}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function StatTile({ label, value, tone = "default" }) {
-  const toneClasses = {
-    default: "border-stone-300 bg-stone-50 text-stone-900",
-    warn: "border-amber-400 bg-amber-50 text-amber-900",
-    danger: "border-red-300 bg-red-50 text-red-900",
-    ok: "border-emerald-300 bg-emerald-50 text-emerald-900",
-  };
-  return (
-    <div className={"rounded-lg border px-4 py-3 " + toneClasses[tone]}>
-      <div className="text-[11px] uppercase tracking-wide font-semibold opacity-70">{label}</div>
-      <div className="text-xl font-mono font-bold mt-0.5">{value}</div>
-    </div>
-  );
-}
-
-function ConflictBadge({ type }) {
-  const map = {
-    SPELLING: { text: "Schreibweise", cls: "bg-stone-200 text-stone-700" },
-    OWGWG: { text: "OWG/WG-Konflikt", cls: "bg-amber-200 text-amber-900" },
-    BOTH: { text: "Schreibweise + OWG/WG", cls: "bg-red-200 text-red-900" },
-  };
-  const m = map[type] || map.SPELLING;
-  return <span className={"px-2 py-0.5 rounded text-[11px] font-semibold " + m.cls}>{m.text}</span>;
-}
-
-function DecisionRow({ candidate, onChange }) {
-  const [expanded, setExpanded] = useState(false);
-  const totalCount = candidate.variants.reduce((s, v) => s + v.count, 0);
-
-  return (
-    <div className={"border rounded-lg " + (candidate.accepted ? "border-stone-300 bg-white" : "border-stone-200 bg-stone-50 opacity-60")}>
-      <div className="flex items-start gap-3 p-3">
-        <input type="checkbox" checked={candidate.accepted}
-               onChange={(e) => onChange({ ...candidate, accepted: e.target.checked })}
-               className="mt-1.5 h-4 w-4 accent-amber-700" aria-label="Übernehmen" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <ConflictBadge type={candidate.conflictType} />
-            <span className="text-xs text-stone-500 font-mono">{totalCount} Datenzeilen betroffen</span>
-            <button onClick={() => setExpanded((e) => !e)}
-                    className="ml-auto flex items-center gap-1 text-xs text-stone-500 hover:text-stone-800">
-              {expanded ? <IconChevronDown /> : <IconChevronRight />}
-              Details
-            </button>
-          </div>
-
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {candidate.variants.map((v) => (
-              <span key={v.name} className="text-xs font-mono bg-stone-100 border border-stone-200 rounded px-1.5 py-0.5"
-                    title={v.nrs?.length ? `Artikelnr.: ${v.nrs.join(", ")}` : undefined}>
-                {v.name} <span className="text-stone-400">×{v.count}</span>
-              </span>
-            ))}
-          </div>
-
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <label className="text-xs text-stone-500">
-              Zielprodukt
-              <input type="text" value={candidate.editedName}
-                     onChange={(e) => onChange({ ...candidate, editedName: e.target.value })}
-                     className="mt-0.5 w-full rounded border border-stone-300 px-2 py-1 text-sm font-mono" />
-            </label>
-            <label className="text-xs text-stone-500">
-              Ziel-Oberwarengruppe
-              <input type="text" value={candidate.editedOwg}
-                     onChange={(e) => onChange({ ...candidate, editedOwg: e.target.value })}
-                     disabled={candidate.conflictType === "SPELLING"}
-                     className="mt-0.5 w-full rounded border border-stone-300 px-2 py-1 text-sm font-mono disabled:bg-stone-100 disabled:text-stone-400" />
-            </label>
-            <label className="text-xs text-stone-500">
-              Ziel-Warengruppe
-              <input type="text" value={candidate.editedWg}
-                     onChange={(e) => onChange({ ...candidate, editedWg: e.target.value })}
-                     disabled={candidate.conflictType === "SPELLING"}
-                     className="mt-0.5 w-full rounded border border-stone-300 px-2 py-1 text-sm font-mono disabled:bg-stone-100 disabled:text-stone-400" />
-            </label>
-          </div>
-
-          {expanded && candidate.owgwgOptions.length > 1 && (
-            <div className="mt-3 text-xs text-stone-600 bg-stone-50 border border-stone-200 rounded p-2">
-              <div className="font-semibold mb-1 flex items-center gap-1"><IconInfo size={12} /> Gefundene OWG/WG-Kombinationen für dieses Produkt:</div>
-              <ul className="space-y-0.5 font-mono">
-                {candidate.owgwgOptions.map((o) => (
-                  <li key={o.owg + o.wg}>
-                    {o.owg} / {o.wg} — {o.count}× aufgetreten
-                    {o.owg === candidate.suggestedOwg && o.wg === candidate.suggestedWg && (
-                      <span className="text-emerald-700 font-semibold"> (häufigste, vorgeschlagen)</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function App() {
-  const [phase, setPhase] = useState(0);
-  const [fileName, setFileName] = useState(null);
-  const [report, setReport] = useState(null);
-  const [error, setError] = useState(null);
-  const [candidates, setCandidates] = useState(null);
-  const [clusterStats, setClusterStats] = useState(null);
-  const [dragOver, setDragOver] = useState(false);
-  const inputRef = useRef(null);
-
-  const handleFile = useCallback((file) => {
-    setError(null);
-    setReport(null);
-    setCandidates(null);
-    setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target.result);
-        const wb = XLSX.read(data, { type: "array" });
-        const sheetName =
-          wb.SheetNames.find((n) => n.toLowerCase().includes("kreuztabelle") && !n.toLowerCase().includes("metadaten")) ||
-          wb.SheetNames[0];
-        const ws = wb.Sheets[sheetName];
-        const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: null });
-        const parsed = parseKreuztabelle(aoa);
-        parsed.sheetName = sheetName;
-        parsed.availableSheets = wb.SheetNames;
-        setReport(parsed);
-        setPhase(0);
-
-        const { candidates: cands, totalDistinct, totalClustersAfterMerge, excludedByWeight } = buildClusters(parsed.leafRows);
-        setCandidates(cands);
-        setClusterStats({ totalDistinct, totalClustersAfterMerge, totalLeafRows: parsed.leafRows.length, excludedByWeight });
-      } catch (err) {
-        setError(err.message || String(err));
+      for (var bi = 0; bi < blocks.length; bi++) {
+        var b = blocks[bi];
+        if (b.type === "GESAMT") continue;
+        var mengeIdx = -1;
+        for (var k = 0; k < 5; k++) { if (String(rowMetric[b.col + k] || "").trim().toLowerCase() === "menge") { mengeIdx = k; break; } }
+        if (mengeIdx < 0) continue;
+        var val = row[b.col + mengeIdx];
+        if (val === "*") maskedMengeCount++;
       }
+
+      leafRows.push({
+        rowIndex: r, markt: String(markt).trim(),
+        owg: owg != null ? String(owg).trim() : "", wg: wg != null ? String(wg).trim() : "",
+        artikel: String(artikelName).trim(), artikelnummer: artikelNr != null ? String(artikelNr).trim() : "",
+        gtin: gtin
+      });
+    }
+
+    return {
+      warnings: warnings, blocks: blocks, tagesBloecke: tagesBloecke, years: years, minDate: minDate, maxDate: maxDate, wochenNummern: wochenNummern,
+      markets: Array.from(markets.entries()).map(function (e) { return { name: e[0], count: e[1] }; }),
+      leafCount: leafCount, subtotalCount: subtotalCount, maskedMengeCount: maskedMengeCount,
+      totalDataRows: aoa.length - 4, leafRows: leafRows
     };
-    reader.onerror = () => setError("Datei konnte nicht gelesen werden.");
-    reader.readAsArrayBuffer(file);
-  }, []);
+  }
 
-  const onDrop = useCallback((e) => {
-    e.preventDefault();
-    setDragOver(false);
-    const f = e.dataTransfer.files?.[0];
-    if (f) handleFile(f);
-  }, [handleFile]);
+  // ==========================================================================
+  // Phase 1: Masterprodukt-Clustering
+  // ==========================================================================
+  function buildClusters(leafRows) {
+    var exactGroups = new Map();
+    leafRows.forEach(function (row) {
+      var norm = transliterate(row.artikel);
+      if (!exactGroups.has(norm)) exactGroups.set(norm, { originals: new Map(), owgwg: new Map() });
+      var g = exactGroups.get(norm);
+      if (!g.originals.has(row.artikel)) g.originals.set(row.artikel, { count: 0, nrs: new Set() });
+      var o = g.originals.get(row.artikel);
+      o.count += 1;
+      if (row.artikelnummer) o.nrs.add(row.artikelnummer);
+      var key = row.owg + "||" + row.wg;
+      g.owgwg.set(key, (g.owgwg.get(key) || 0) + 1);
+    });
 
-  const acceptedCount = useMemo(
-    () => (candidates ? candidates.filter((c) => c.accepted).length : 0),
-    [candidates]
-  );
+    var normNames = Array.from(exactGroups.keys());
+    var buckets = new Map();
+    normNames.forEach(function (n) {
+      var key = n.slice(0, 3);
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(n);
+    });
 
-  const updateCandidate = (updated) => {
-    setCandidates((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
-  };
+    var parent = new Map(normNames.map(function (n) { return [n, n]; }));
+    function find(x) {
+      while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); }
+      return x;
+    }
+    function union(a, b) { var ra = find(a), rb = find(b); if (ra !== rb) parent.set(ra, rb); }
 
-  const setAll = (accepted) => {
-    setCandidates((prev) => prev.map((c) => ({ ...c, accepted })));
-  };
-
-  return (
-    <div className="min-h-screen bg-stone-100 text-stone-900 font-sans">
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <div className="flex items-baseline gap-3 flex-wrap">
-            <h1 className="font-serif text-3xl font-bold tracking-tight text-stone-900">Backwaren-Planung</h1>
-            <span className="font-mono text-xs text-stone-500 bg-white border border-stone-300 rounded px-2 py-0.5">
-              ELH · NST · OED
-            </span>
-          </div>
-          <p className="text-stone-600 text-sm mt-1 max-w-2xl">
-            Phase 0 (Upload &amp; Validierung) und Phase 1 (Bereinigung / Masterprodukte inkl.
-            OWG/WG-Konsolidierung) — läuft vollständig im Browser, keine Datei verlässt diesen Rechner.
-          </p>
-          <div className="mt-4">
-            <StepDots active={phase} />
-          </div>
-        </div>
-
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={onDrop}
-          className={
-            "rounded-xl border-2 border-dashed p-8 text-center transition-colors " +
-            (dragOver ? "border-amber-600 bg-amber-50" : "border-stone-300 bg-white")
+    var SIM_THRESHOLD = 0.86;
+    var excludedByWeight = [];
+    buckets.forEach(function (list) {
+      for (var i = 0; i < list.length; i++) {
+        for (var j = i + 1; j < list.length; j++) {
+          if (list[i] === list[j]) continue;
+          var sim = similarity(list[i], list[j]);
+          if (sim < SIM_THRESHOLD) continue;
+          var qa = extractTrailingQuantity(list[i]), qb = extractTrailingQuantity(list[j]);
+          if (qa && qb && qa.value !== qb.value) {
+            excludedByWeight.push({ a: list[i], b: list[j], sim: Math.round(sim * 100) / 100 });
+            continue;
           }
-        >
-          <input ref={inputRef} type="file" accept=".xlsx,.xlsm" className="hidden"
-                 onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
-          <div className="mx-auto mb-2 text-stone-400 flex justify-center"><IconUpload size={28} /></div>
-          <p className="text-stone-700 font-medium">Kreuztabelle (.xlsx) hierher ziehen</p>
-          <p className="text-stone-500 text-sm mt-1">
-            oder{" "}
-            <button onClick={() => inputRef.current?.click()} className="text-amber-700 underline font-semibold">
-              Datei auswählen
-            </button>
-          </p>
-          {fileName && <p className="text-xs text-stone-400 mt-3 font-mono">Geladen: {fileName}</p>}
-        </div>
+          union(list[i], list[j]);
+        }
+      }
+    });
 
-        {error && (
-          <div className="mt-4 rounded-lg border border-red-300 bg-red-50 text-red-800 p-4 flex gap-2 items-start">
-            <IconAlert size={18} className="shrink-0 mt-0.5" />
-            <div>
-              <div className="font-semibold text-sm">Datei konnte nicht als Kreuztabelle erkannt werden</div>
-              <div className="text-sm mt-0.5">{error}</div>
-            </div>
-          </div>
-        )}
+    var merged = new Map();
+    normNames.forEach(function (n) {
+      var root = find(n);
+      if (!merged.has(root)) merged.set(root, { originals: new Map(), owgwg: new Map(), normVariants: new Set() });
+      var target = merged.get(root);
+      var src = exactGroups.get(n);
+      target.normVariants.add(n);
+      src.originals.forEach(function (info, o) {
+        if (!target.originals.has(o)) target.originals.set(o, { count: 0, nrs: new Set() });
+        var t = target.originals.get(o);
+        t.count += info.count;
+        info.nrs.forEach(function (nr) { t.nrs.add(nr); });
+      });
+      src.owgwg.forEach(function (c, k) { target.owgwg.set(k, (target.owgwg.get(k) || 0) + c); });
+    });
 
-        {report && (
-          <div className="mt-8">
-            <div className="flex items-center gap-2 mb-3">
-              <IconSheet size={18} className="text-stone-500" />
-              <h2 className="font-serif text-xl font-bold">Phase 0 — Validierungsbericht</h2>
-              <span className="text-xs font-mono text-stone-400">Blatt: {report.sheetName}</span>
-            </div>
+    var candidates = [];
+    var id = 0;
+    merged.forEach(function (g) {
+      var originalsSorted = Array.from(g.originals.entries()).sort(function (a, b) { return b[1].count - a[1].count; });
+      var owgwgSorted = Array.from(g.owgwg.entries()).sort(function (a, b) { return b[1] - a[1]; });
+      var hasSpellingVariants = originalsSorted.length > 1;
+      var hasOwgWgConflict = owgwgSorted.length > 1;
+      if (!hasSpellingVariants && !hasOwgWgConflict) return;
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatTile label="Datenzeilen gesamt" value={report.totalDataRows} />
-              <StatTile label="Artikelzeilen (Leaf)" value={report.leafCount} tone="ok" />
-              <StatTile label="Zwischensummen-Zeilen" value={report.subtotalCount} />
-              <StatTile label="Maskierte Mengen (*)" value={report.maskedMengeCount}
-                        tone={report.maskedMengeCount > 0 ? "warn" : "ok"} />
-              <StatTile label="Erkannte Märkte" value={report.markets.length} />
-              <StatTile label="Erkannte Wochen" value={report.wochenNummern.length} />
-              <StatTile label="Tagesblöcke gesamt" value={report.tagesBloecke.length} />
-              <StatTile label="Zeitraum" value={`${fmtDate(report.minDate)} – ${fmtDate(report.maxDate)}`} />
-            </div>
+      var suggName = originalsSorted[0][0];
+      var suggKey = owgwgSorted[0][0];
+      var suggParts = suggKey.split("||"), suggOwg = suggParts[0], suggWg = suggParts[1];
 
-            <div className="mt-4 grid sm:grid-cols-2 gap-4">
-              <div className="rounded-lg border border-stone-300 bg-white p-4">
-                <div className="text-xs uppercase tracking-wide font-semibold text-stone-500 mb-2">Märkte in dieser Datei</div>
-                <ul className="text-sm font-mono space-y-1">
-                  {report.markets.map((m) => (
-                    <li key={m.name} className="flex justify-between border-b border-stone-100 pb-1">
-                      <span>{m.name}</span>
-                      <span className="text-stone-400">{m.count} Zeilen</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="rounded-lg border border-stone-300 bg-white p-4">
-                <div className="text-xs uppercase tracking-wide font-semibold text-stone-500 mb-2">Jahre in Vergleichsdaten</div>
-                <p className="text-sm text-stone-700">
-                  {report.years.length ? report.years.join(", ") : "keine Tagesdaten erkannt"} — Vergleich erfolgt
-                  laut Exportstruktur über Kalenderwoche + Wochentag (nicht über das Datum selbst).
-                </p>
-                {report.warnings.length > 0 && (
-                  <div className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">
-                    {report.warnings.map((w, i) => (<div key={i}>⚠ {w}</div>))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+      var conflictType = "SPELLING";
+      if (hasSpellingVariants && hasOwgWgConflict) conflictType = "BOTH";
+      else if (hasOwgWgConflict) conflictType = "OWGWG";
 
-        {candidates && (
-          <div className="mt-10">
-            <div className="flex items-center gap-2 mb-1">
-              <IconCheck size={18} className="text-stone-500" />
-              <h2 className="font-serif text-xl font-bold">Phase 1 — Bereinigung &amp; Masterprodukte</h2>
-            </div>
-            <p className="text-sm text-stone-600 mb-4">
-              {clusterStats.totalDistinct} unterschiedliche Artikel-Schreibweisen gefunden →{" "}
-              {clusterStats.totalClustersAfterMerge} Masterprodukte nach automatischer Vor-Gruppierung.{" "}
-              <strong>{candidates.length}</strong> davon brauchen eine Entscheidung (Rechtschreibvariante
-              und/oder abweichende Oberwarengruppe/Warengruppe über die Zeit). Alles andere ist bereits
-              eindeutig und wird unverändert übernommen.
-            </p>
+      var accepted = conflictType === "OWGWG";
 
-            {clusterStats.excludedByWeight.length > 0 && (
-              <div className="mb-4 text-xs text-stone-600 bg-white border border-stone-200 rounded-lg p-3">
-                <div className="font-semibold text-stone-700 mb-1 flex items-center gap-1">
-                  <IconInfo size={13} /> {clusterStats.excludedByWeight.length} ähnliche Namenspaare bewusst NICHT vorgeschlagen
-                </div>
-                <p className="mb-1.5">
-                  Diese Paare unterscheiden sich nur durch eine abweichende Gebindegröße/Menge am Ende der
-                  Bezeichnung — das deutet auf tatsächlich unterschiedliche Artikel hin (nicht auf einen
-                  Schreibfehler), deshalb keine automatische Zusammenführung:
-                </p>
-                <ul className="font-mono space-y-0.5 max-h-28 overflow-y-auto">
-                  {clusterStats.excludedByWeight.map((p, i) => (
-                    <li key={i} className="text-stone-500">{p.a} ↔ {p.b}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+      candidates.push({
+        id: id++,
+        variants: originalsSorted.map(function (e) { return { name: e[0], count: e[1].count, nrs: Array.from(e[1].nrs) }; }),
+        owgwgOptions: owgwgSorted.map(function (e) { var p = e[0].split("||"); return { owg: p[0], wg: p[1], count: e[1] }; }),
+        suggestedName: suggName, suggestedOwg: suggOwg, suggestedWg: suggWg,
+        conflictType: conflictType, accepted: accepted,
+        editedName: suggName, editedOwg: suggOwg, editedWg: suggWg
+      });
+    });
 
-            {candidates.length === 0 ? (
-              <div className="rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 p-4 text-sm">
-                Keine offenen Fälle — alle Artikel sind eindeutig einem Masterprodukt und einer
-                Oberwarengruppe/Warengruppe zugeordnet.
-              </div>
-            ) : (
-              <>
-                <div className="flex gap-2 mb-3">
-                  <button onClick={() => setAll(true)}
-                          className="text-xs font-semibold px-3 py-1.5 rounded border border-stone-300 bg-white hover:bg-stone-50">
-                    Alle übernehmen
-                  </button>
-                  <button onClick={() => setAll(false)}
-                          className="text-xs font-semibold px-3 py-1.5 rounded border border-stone-300 bg-white hover:bg-stone-50 flex items-center gap-1">
-                    <IconReset size={12} /> Alle zurücksetzen
-                  </button>
-                  <span className="ml-auto text-xs text-stone-500 self-center font-mono">
-                    {acceptedCount} / {candidates.length} übernommen
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {candidates.map((c) => (
-                    <DecisionRow key={c.id} candidate={c} onChange={updateCandidate} />
-                  ))}
-                </div>
-              </>
-            )}
+    candidates.sort(function (a, b) {
+      var totalA = a.variants.reduce(function (s, v) { return s + v.count; }, 0);
+      var totalB = b.variants.reduce(function (s, v) { return s + v.count; }, 0);
+      return totalB - totalA;
+    });
 
-            <div className="mt-6 flex items-center gap-3">
-              <button onClick={() => exportXlsx(report.leafRows, candidates)}
-                      className="flex items-center gap-2 bg-amber-700 hover:bg-amber-800 text-amber-50 font-semibold px-4 py-2.5 rounded-lg text-sm">
-                <IconDownload size={16} />
-                Bereinigung als .xlsx exportieren
-              </button>
-              <span className="text-xs text-stone-500">
-                Enthält Blatt „Masterprodukte" (alle {report.leafCount} Artikelzeilen mit finaler
-                Zuordnung) und „Produktentscheidungen" (Protokoll aller getroffenen Entscheidungen).
-              </span>
-            </div>
-          </div>
-        )}
+    return { candidates: candidates, totalDistinct: normNames.length, totalClustersAfterMerge: merged.size, excludedByWeight: excludedByWeight };
+  }
 
-        <div className="mt-12 pt-4 border-t border-stone-300 text-xs text-stone-400">
-          Nächste Phasen (2–8: Mengenschätzung, Tagesbasis, Forecast, Portfolio, Produktionsplan, Bestellung,
-          Export) folgen als eigene Ausbaustufen, sobald Phase 0+1 an echten Daten für ELH/NST/OED bestätigt sind.
-        </div>
-      </div>
-    </div>
-  );
-}
+  // ==========================================================================
+  // Export: bereinigte Zuordnung + Entscheidungen als .xlsx
+  // ==========================================================================
+  function exportXlsx(leafRows, candidates) {
+    var nameOverride = new Map(), owgWgOverride = new Map();
+    candidates.forEach(function (c) {
+      if (!c.accepted) return;
+      c.variants.forEach(function (v) {
+        nameOverride.set(v.name, c.editedName);
+        if (c.conflictType === "OWGWG" || c.conflictType === "BOTH") owgWgOverride.set(v.name, { owg: c.editedOwg, wg: c.editedWg });
+      });
+    });
 
-document.getElementById("root").setAttribute("data-mounted", "true");
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    var bereinigungHeader = ["Originalbezeichnung", "Oberwarengruppe (Original)", "Warengruppe (Original)", "Masterprodukt (bereinigt)", "Oberwarengruppe (final)", "Warengruppe (final)", "GTIN"];
+    var bereinigungRows = leafRows.map(function (r) {
+      var finalName = nameOverride.get(r.artikel) || r.artikel;
+      var ow = owgWgOverride.get(r.artikel);
+      return [r.artikel, r.owg, r.wg, finalName, ow ? ow.owg : r.owg, ow ? ow.wg : r.wg, r.gtin != null ? r.gtin : ""];
+    });
+
+    var entscheidungenHeader = ["Paar-Schlüssel", "Varianten (Original)", "Konflikttyp", "Übernommen", "Zielprodukt", "Ziel-Oberwarengruppe", "Ziel-Warengruppe", "Gespeichert am"];
+    var now = new Date();
+    var timestamp = now.toISOString().slice(0, 19).replace("T", " ");
+    var entscheidungenRows = candidates.map(function (c) {
+      return [
+        c.variants.map(function (v) { return v.name; }).join("||"),
+        c.variants.map(function (v) { return v.name + " (" + v.count + ")"; }).join(" / "),
+        c.conflictType, c.accepted ? "JA" : "NEIN", c.editedName, c.editedOwg, c.editedWg, timestamp
+      ];
+    });
+
+    var wb = XLSX.utils.book_new();
+    var ws1 = XLSX.utils.aoa_to_sheet([bereinigungHeader].concat(bereinigungRows));
+    var ws2 = XLSX.utils.aoa_to_sheet([entscheidungenHeader].concat(entscheidungenRows));
+    ws1["!cols"] = [{ wch: 32 }, { wch: 24 }, { wch: 24 }, { wch: 32 }, { wch: 24 }, { wch: 24 }, { wch: 14 }];
+    ws2["!cols"] = [{ wch: 40 }, { wch: 45 }, { wch: 12 }, { wch: 11 }, { wch: 30 }, { wch: 24 }, { wch: 24 }, { wch: 18 }];
+    XLSX.utils.book_append_sheet(wb, ws1, "Masterprodukte");
+    XLSX.utils.book_append_sheet(wb, ws2, "Produktentscheidungen");
+
+    var out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    var blob = new Blob([out], { type: "application/octet-stream" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "Bereinigung_Phase1.xlsx";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ==========================================================================
+  // UI
+  // ==========================================================================
+  var PHASES = [
+    { n: 0, label: "Upload" }, { n: 1, label: "Bereinigung" }, { n: 2, label: "Mengenschätzung" },
+    { n: 3, label: "Tagesbasis" }, { n: 4, label: "Forecast" }, { n: 5, label: "Portfolio" },
+    { n: 6, label: "Produktionsplan" }, { n: 7, label: "Bestellung" }, { n: 8, label: "Export" }
+  ];
+
+  function fmtDate(d) { return d ? d.toLocaleDateString("de-DE") : "—"; }
+
+  function cxEl(tag, classStr, props, children) {
+    var mixed = cx(classStr);
+    var finalProps = Object.assign({}, props || {});
+    finalProps.className = (mixed.className + " " + (finalProps.className || "")).trim();
+    finalProps.style = Object.assign({}, mixed.style, finalProps.style || {});
+    return h.apply(null, [tag, finalProps].concat(children || []));
+  }
+
+  function StepDots(props) {
+    var active = props.active;
+    return cxEl("div", "flex flex-wrap gap-2", null, PHASES.map(function (p) {
+      var isActive = p.n === active, isDone = p.n < active;
+      var cls = "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-mono border " +
+        (isActive ? "bg-amber-700 border-amber-800 text-amber-50" : isDone ? "bg-stone-800 border-stone-800 text-stone-100" : "bg-stone-100 border-stone-300 text-stone-400");
+      return cxEl("div", cls, { key: p.n }, [
+        cxEl("span", "font-bold", null, [String(p.n).padStart(2, "0")]),
+        h("span", null, p.label)
+      ]);
+    }));
+  }
+
+  function StatTile(props) {
+    var tone = props.tone || "default";
+    var toneClasses = {
+      default: "border-stone-300 bg-stone-50 text-stone-900",
+      warn: "border-amber-400 bg-amber-50 text-amber-900",
+      danger: "border-red-300 bg-red-50 text-red-900",
+      ok: "border-emerald-300 bg-emerald-50 text-emerald-900"
+    };
+    return cxEl("div", "rounded-lg border px-4 py-3 " + toneClasses[tone], null, [
+      cxEl("div", "text-[11px] uppercase tracking-wide font-semibold opacity-70", null, [props.label]),
+      cxEl("div", "text-xl font-mono font-bold mt-0.5", null, [props.value])
+    ]);
+  }
+
+  function ConflictBadge(props) {
+    var map = {
+      SPELLING: { text: "Schreibweise", cls: "bg-stone-200 text-stone-700" },
+      OWGWG: { text: "OWG/WG-Konflikt", cls: "bg-amber-200 text-amber-900" },
+      BOTH: { text: "Schreibweise + OWG/WG", cls: "bg-red-200 text-red-900" }
+    };
+    var m = map[props.type] || map.SPELLING;
+    return cxEl("span", "px-2 py-0.5 rounded text-[11px] font-semibold " + m.cls, null, [m.text]);
+  }
+
+  function DecisionRow(props) {
+    var candidate = props.candidate, onChange = props.onChange;
+    var expandedState = useState(false);
+    var expanded = expandedState[0], setExpanded = expandedState[1];
+    var totalCount = candidate.variants.reduce(function (s, v) { return s + v.count; }, 0);
+
+    return cxEl("div", "border rounded-lg " + (candidate.accepted ? "border-stone-300 bg-white" : "border-stone-200 bg-stone-50 opacity-60"), null, [
+      cxEl("div", "flex items-start gap-3 p-3", { key: "row" }, [
+        h("input", {
+          key: "cb", type: "checkbox", checked: candidate.accepted,
+          onChange: function (e) { onChange(Object.assign({}, candidate, { accepted: e.target.checked })); },
+          className: "mt-1.5 h-4 w-4 accent-amber-700", "aria-label": "Übernehmen"
+        }),
+        cxEl("div", "flex-1 min-w-0", { key: "body" }, [
+          cxEl("div", "flex items-center gap-2 flex-wrap", { key: "head" }, [
+            h(ConflictBadge, { key: "badge", type: candidate.conflictType }),
+            cxEl("span", "text-xs text-stone-500 font-mono", { key: "cnt" }, [totalCount + " Datenzeilen betroffen"]),
+            cxEl("button", "ml-auto flex items-center gap-1 text-xs text-stone-500 hover:text-stone-800", {
+              key: "toggle", onClick: function () { setExpanded(function (e) { return !e; }); }
+            }, [
+              expanded ? h(IconChevronDown, { key: "i" }) : h(IconChevronRight, { key: "i" }),
+              " Details"
+            ])
+          ]),
+          cxEl("div", "mt-2 flex flex-wrap gap-1.5", { key: "variants" }, candidate.variants.map(function (v) {
+            return cxEl("span", "text-xs font-mono bg-stone-100 border border-stone-200 rounded px-1.5 py-0.5", {
+              key: v.name, title: v.nrs && v.nrs.length ? ("Artikelnr.: " + v.nrs.join(", ")) : undefined
+            }, [v.name + " ", cxEl("span", "text-stone-400", { key: "c" }, ["×" + v.count])]);
+          })),
+          cxEl("div", "mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2", { key: "fields" }, [
+            cxEl("label", "text-xs text-stone-500", { key: "f1" }, [
+              "Zielprodukt",
+              h("input", {
+                type: "text", value: candidate.editedName,
+                onChange: function (e) { onChange(Object.assign({}, candidate, { editedName: e.target.value })); },
+                className: "mt-0.5 w-full rounded border border-stone-300 px-2 py-1 text-sm font-mono"
+              })
+            ]),
+            cxEl("label", "text-xs text-stone-500", { key: "f2" }, [
+              "Ziel-Oberwarengruppe",
+              h("input", {
+                type: "text", value: candidate.editedOwg,
+                onChange: function (e) { onChange(Object.assign({}, candidate, { editedOwg: e.target.value })); },
+                disabled: candidate.conflictType === "SPELLING",
+                className: "mt-0.5 w-full rounded border border-stone-300 px-2 py-1 text-sm font-mono disabled:bg-stone-100 disabled:text-stone-400"
+              })
+            ]),
+            cxEl("label", "text-xs text-stone-500", { key: "f3" }, [
+              "Ziel-Warengruppe",
+              h("input", {
+                type: "text", value: candidate.editedWg,
+                onChange: function (e) { onChange(Object.assign({}, candidate, { editedWg: e.target.value })); },
+                disabled: candidate.conflictType === "SPELLING",
+                className: "mt-0.5 w-full rounded border border-stone-300 px-2 py-1 text-sm font-mono disabled:bg-stone-100 disabled:text-stone-400"
+              })
+            ])
+          ]),
+          (expanded && candidate.owgwgOptions.length > 1) ? cxEl("div", "mt-3 text-xs text-stone-600 bg-stone-50 border border-stone-200 rounded p-2", { key: "exp" }, [
+            cxEl("div", "font-semibold mb-1 flex items-center gap-1", { key: "t" }, [h(IconInfo, { key: "i", size: 12 }), " Gefundene OWG/WG-Kombinationen für dieses Produkt:"]),
+            cxEl("ul", "space-y-0.5 font-mono", { key: "l" }, candidate.owgwgOptions.map(function (o) {
+              return h("li", { key: o.owg + o.wg }, [
+                o.owg + " / " + o.wg + " — " + o.count + "× aufgetreten",
+                (o.owg === candidate.suggestedOwg && o.wg === candidate.suggestedWg) ? cxEl("span", "text-emerald-700 font-semibold", { key: "s" }, [" (häufigste, vorgeschlagen)"]) : null
+              ]);
+            }))
+          ]) : null
+        ])
+      ])
+    ]);
+  }
+
+  function App() {
+    var phaseState = useState(0); var phase = phaseState[0];
+    var fileNameState = useState(null); var fileName = fileNameState[0], setFileName = fileNameState[1];
+    var reportState = useState(null); var report = reportState[0], setReport = reportState[1];
+    var errorState = useState(null); var error = errorState[0], setError = errorState[1];
+    var candidatesState = useState(null); var candidates = candidatesState[0], setCandidates = candidatesState[1];
+    var clusterStatsState = useState(null); var clusterStats = clusterStatsState[0], setClusterStats = clusterStatsState[1];
+    var dragOverState = useState(false); var dragOver = dragOverState[0], setDragOver = dragOverState[1];
+    var setPhase = phaseState[1];
+    var inputRef = useRef(null);
+
+    var handleFile = useCallback(function (file) {
+      setError(null); setReport(null); setCandidates(null); setFileName(file.name);
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          var data = new Uint8Array(e.target.result);
+          var wb = XLSX.read(data, { type: "array" });
+          var sheetName = wb.SheetNames.find(function (n) { return n.toLowerCase().indexOf("kreuztabelle") >= 0 && n.toLowerCase().indexOf("metadaten") < 0; }) || wb.SheetNames[0];
+          var ws = wb.Sheets[sheetName];
+          var aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: null });
+          var parsed = parseKreuztabelle(aoa);
+          parsed.sheetName = sheetName;
+          parsed.availableSheets = wb.SheetNames;
+          setReport(parsed);
+          setPhase(0);
+          var built = buildClusters(parsed.leafRows);
+          setCandidates(built.candidates);
+          setClusterStats({ totalDistinct: built.totalDistinct, totalClustersAfterMerge: built.totalClustersAfterMerge, totalLeafRows: parsed.leafRows.length, excludedByWeight: built.excludedByWeight });
+        } catch (err) {
+          setError(err.message || String(err));
+        }
+      };
+      reader.onerror = function () { setError("Datei konnte nicht gelesen werden."); };
+      reader.readAsArrayBuffer(file);
+    }, []);
+
+    var onDrop = useCallback(function (e) {
+      e.preventDefault(); setDragOver(false);
+      var f = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) handleFile(f);
+    }, [handleFile]);
+
+    var acceptedCount = useMemo(function () { return candidates ? candidates.filter(function (c) { return c.accepted; }).length : 0; }, [candidates]);
+
+    function updateCandidate(updated) {
+      setCandidates(function (prev) { return prev.map(function (c) { return c.id === updated.id ? updated : c; }); });
+    }
+    function setAll(accepted) {
+      setCandidates(function (prev) { return prev.map(function (c) { return Object.assign({}, c, { accepted: accepted }); }); });
+    }
+
+    var children = [];
+
+    // Header
+    children.push(cxEl("div", "mb-6", { key: "header" }, [
+      cxEl("div", "flex items-baseline gap-3 flex-wrap", { key: "h1row" }, [
+        cxEl("h1", "font-serif text-3xl font-bold tracking-tight text-stone-900", { key: "h1" }, ["Backwaren-Planung"]),
+        cxEl("span", "font-mono text-xs text-stone-500 bg-white border border-stone-300 rounded px-2 py-0.5", { key: "badge" }, ["ELH · NST · OED"])
+      ]),
+      cxEl("p", "text-stone-600 text-sm mt-1 max-w-2xl", { key: "sub" }, ["Phase 0 (Upload & Validierung) und Phase 1 (Bereinigung / Masterprodukte inkl. OWG/WG-Konsolidierung) — läuft vollständig im Browser, keine Datei verlässt diesen Rechner."]),
+      cxEl("div", "mt-4", { key: "dots" }, [h(StepDots, { active: phase })])
+    ]));
+
+    // Upload
+    children.push(cxEl("div", "rounded-xl border-2 border-dashed p-8 text-center transition-colors " + (dragOver ? "border-amber-600 bg-amber-50" : "border-stone-300 bg-white"), {
+      key: "upload",
+      onDragOver: function (e) { e.preventDefault(); setDragOver(true); },
+      onDragLeave: function () { setDragOver(false); },
+      onDrop: onDrop
+    }, [
+      h("input", {
+        key: "input", ref: inputRef, type: "file", accept: ".xlsx,.xlsm", className: "hidden",
+        onChange: function (e) { if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]); }
+      }),
+      cxEl("div", "mx-auto mb-2 text-stone-400 flex justify-center", { key: "icon" }, [h(IconUpload, { size: 28 })]),
+      cxEl("p", "text-stone-700 font-medium", { key: "t1" }, ["Kreuztabelle (.xlsx) hierher ziehen"]),
+      cxEl("p", "text-stone-500 text-sm mt-1", { key: "t2" }, [
+        "oder ",
+        cxEl("button", "text-amber-700 underline font-semibold", { key: "btn", onClick: function () { inputRef.current && inputRef.current.click(); } }, ["Datei auswählen"])
+      ]),
+      fileName ? cxEl("p", "text-xs text-stone-400 mt-3 font-mono", { key: "fn" }, ["Geladen: " + fileName]) : null
+    ]));
+
+    if (error) {
+      children.push(cxEl("div", "mt-4 rounded-lg border border-red-300 bg-red-50 text-red-800 p-4 flex gap-2 items-start", { key: "error" }, [
+        h(IconAlert, { key: "i", size: 18, className: "shrink-0 mt-0.5" }),
+        h("div", { key: "t" }, [
+          cxEl("div", "font-semibold text-sm", { key: "t1" }, ["Datei konnte nicht als Kreuztabelle erkannt werden"]),
+          cxEl("div", "text-sm mt-0.5", { key: "t2" }, [error])
+        ])
+      ]));
+    }
+
+    if (report) {
+      children.push(cxEl("div", "mt-8", { key: "report" }, [
+        cxEl("div", "flex items-center gap-2 mb-3", { key: "h" }, [
+          h(IconSheet, { key: "i", size: 18, className: "text-stone-500" }),
+          cxEl("h2", "font-serif text-xl font-bold", { key: "h2" }, ["Phase 0 — Validierungsbericht"]),
+          cxEl("span", "text-xs font-mono text-stone-400", { key: "s" }, ["Blatt: " + report.sheetName])
+        ]),
+        cxEl("div", "grid grid-cols-2 sm:grid-cols-4 gap-3", { key: "tiles" }, [
+          h(StatTile, { key: "1", label: "Datenzeilen gesamt", value: report.totalDataRows }),
+          h(StatTile, { key: "2", label: "Artikelzeilen (Leaf)", value: report.leafCount, tone: "ok" }),
+          h(StatTile, { key: "3", label: "Zwischensummen-Zeilen", value: report.subtotalCount }),
+          h(StatTile, { key: "4", label: "Maskierte Mengen (*)", value: report.maskedMengeCount, tone: report.maskedMengeCount > 0 ? "warn" : "ok" }),
+          h(StatTile, { key: "5", label: "Erkannte Märkte", value: report.markets.length }),
+          h(StatTile, { key: "6", label: "Erkannte Wochen", value: report.wochenNummern.length }),
+          h(StatTile, { key: "7", label: "Tagesblöcke gesamt", value: report.tagesBloecke.length }),
+          h(StatTile, { key: "8", label: "Zeitraum", value: fmtDate(report.minDate) + " – " + fmtDate(report.maxDate) })
+        ]),
+        cxEl("div", "mt-4 grid sm:grid-cols-2 gap-4", { key: "info" }, [
+          cxEl("div", "rounded-lg border border-stone-300 bg-white p-4", { key: "markets" }, [
+            cxEl("div", "text-xs uppercase tracking-wide font-semibold text-stone-500 mb-2", { key: "t" }, ["Märkte in dieser Datei"]),
+            cxEl("ul", "text-sm font-mono space-y-1", { key: "l" }, report.markets.map(function (m) {
+              return cxEl("li", "flex justify-between border-b border-stone-100 pb-1", { key: m.name }, [
+                h("span", { key: "n" }, m.name), cxEl("span", "text-stone-400", { key: "c" }, [m.count + " Zeilen"])
+              ]);
+            }))
+          ]),
+          cxEl("div", "rounded-lg border border-stone-300 bg-white p-4", { key: "years" }, [
+            cxEl("div", "text-xs uppercase tracking-wide font-semibold text-stone-500 mb-2", { key: "t" }, ["Jahre in Vergleichsdaten"]),
+            cxEl("p", "text-sm text-stone-700", { key: "p" }, [(report.years.length ? report.years.join(", ") : "keine Tagesdaten erkannt") + " — Vergleich erfolgt laut Exportstruktur über Kalenderwoche + Wochentag (nicht über das Datum selbst)."]),
+            report.warnings.length > 0 ? cxEl("div", "mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2", { key: "w" }, report.warnings.map(function (w, i) { return h("div", { key: i }, "⚠ " + w); })) : null
+          ])
+        ])
+      ]));
+    }
+
+    if (candidates) {
+      children.push(cxEl("div", "mt-10", { key: "phase1" }, [
+        cxEl("div", "flex items-center gap-2 mb-1", { key: "h" }, [
+          h(IconCheck, { key: "i", size: 18, className: "text-stone-500" }),
+          cxEl("h2", "font-serif text-xl font-bold", { key: "h2" }, ["Phase 1 — Bereinigung & Masterprodukte"])
+        ]),
+        cxEl("p", "text-sm text-stone-600 mb-4", { key: "desc" }, [
+          clusterStats.totalDistinct + " unterschiedliche Artikel-Schreibweisen gefunden → " + clusterStats.totalClustersAfterMerge + " Masterprodukte nach automatischer Vor-Gruppierung. ",
+          h("strong", { key: "b" }, candidates.length), " davon brauchen eine Entscheidung (Rechtschreibvariante und/oder abweichende Oberwarengruppe/Warengruppe über die Zeit). Alles andere ist bereits eindeutig und wird unverändert übernommen."
+        ]),
+        clusterStats.excludedByWeight.length > 0 ? cxEl("div", "mb-4 text-xs text-stone-600 bg-white border border-stone-200 rounded-lg p-3", { key: "excl" }, [
+          cxEl("div", "font-semibold text-stone-700 mb-1 flex items-center gap-1", { key: "t" }, [h(IconInfo, { key: "i", size: 13 }), " " + clusterStats.excludedByWeight.length + " ähnliche Namenspaare bewusst NICHT vorgeschlagen"]),
+          cxEl("p", "mb-1.5", { key: "p" }, ["Diese Paare unterscheiden sich nur durch eine abweichende Gebindegröße/Menge am Ende der Bezeichnung — das deutet auf tatsächlich unterschiedliche Artikel hin (nicht auf einen Schreibfehler), deshalb keine automatische Zusammenführung:"]),
+          cxEl("ul", "font-mono space-y-0.5 max-h-28 overflow-y-auto", { key: "l" }, clusterStats.excludedByWeight.map(function (p, i) {
+            return cxEl("li", "text-stone-500", { key: i }, [p.a + " ↔ " + p.b]);
+          }))
+        ]) : null,
+        candidates.length === 0 ? cxEl("div", "rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 p-4 text-sm", { key: "none" }, ["Keine offenen Fälle — alle Artikel sind eindeutig einem Masterprodukt und einer Oberwarengruppe/Warengruppe zugeordnet."]) :
+          h("div", { key: "list" }, [
+            cxEl("div", "flex gap-2 mb-3", { key: "actions" }, [
+              cxEl("button", "text-xs font-semibold px-3 py-1.5 rounded border border-stone-300 bg-white hover:bg-stone-50", { key: "all", onClick: function () { setAll(true); } }, ["Alle übernehmen"]),
+              cxEl("button", "text-xs font-semibold px-3 py-1.5 rounded border border-stone-300 bg-white hover:bg-stone-50 flex items-center gap-1", { key: "none", onClick: function () { setAll(false); } }, [h(IconReset, { key: "i", size: 12 }), " Alle zurücksetzen"]),
+              cxEl("span", "ml-auto text-xs text-stone-500 self-center font-mono", { key: "cnt" }, [acceptedCount + " / " + candidates.length + " übernommen"])
+            ]),
+            cxEl("div", "space-y-2", { key: "rows" }, candidates.map(function (c) { return h(DecisionRow, { key: c.id, candidate: c, onChange: updateCandidate }); }))
+          ]),
+        cxEl("div", "mt-6 flex items-center gap-3", { key: "export" }, [
+          cxEl("button", "flex items-center gap-2 bg-amber-700 hover:bg-amber-800 text-amber-50 font-semibold px-4 py-2.5 rounded-lg text-sm", {
+            key: "btn", onClick: function () { exportXlsx(report.leafRows, candidates); }
+          }, [h(IconDownload, { key: "i", size: 16 }), " Bereinigung als .xlsx exportieren"]),
+          cxEl("span", "text-xs text-stone-500", { key: "hint" }, ["Enthält Blatt „Masterprodukte\u201c (alle " + report.leafCount + " Artikelzeilen mit finaler Zuordnung) und „Produktentscheidungen\u201c (Protokoll aller getroffenen Entscheidungen)."])
+        ])
+      ]));
+    }
+
+    children.push(cxEl("div", "mt-12 pt-4 border-t border-stone-300 text-xs text-stone-400", { key: "footer" }, [
+      "Nächste Phasen (2–8: Mengenschätzung, Tagesbasis, Forecast, Portfolio, Produktionsplan, Bestellung, Export) folgen als eigene Ausbaustufen, sobald Phase 0+1 an echten Daten für ELH/NST/OED bestätigt sind."
+    ]));
+
+    return cxEl("div", "min-h-screen bg-stone-100 text-stone-900 font-sans", null, [
+      cxEl("div", "max-w-5xl mx-auto px-4 py-8", { key: "inner" }, children)
+    ]);
+  }
+
+  document.getElementById("root").setAttribute("data-mounted", "true");
+  ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+})();
 </script>
 </body>
 </html>
