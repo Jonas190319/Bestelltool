@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Backwaren-Planung — ELH · NST · OED</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+  body { margin: 0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useCallback, useMemo, useRef } = React;
+
+// ---------------------------------------------------------------------------
+// Kleine Inline-Icons (statt einer externen Icon-Bibliothek, damit die App
+// ohne zusätzliche Abhängigkeit als einzelne Datei läuft)
+// ---------------------------------------------------------------------------
+function Icon({ path, size = 16, className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d={path} />
+    </svg>
+  );
+}
+const IconUpload = (p) => <Icon {...p} path="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />;
+const IconCheck = (p) => <Icon {...p} path="M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3" />;
+const IconAlert = (p) => <Icon {...p} path="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" />;
+const IconChevronDown = (p) => <Icon {...p} path="M6 9l6 6 6-6" />;
+const IconChevronRight = (p) => <Icon {...p} path="M9 18l6-6-6-6" />;
+const IconDownload = (p) => <Icon {...p} path="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />;
+const IconReset = (p) => <Icon {...p} path="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8M3 3v5h5" />;
+const IconInfo = (p) => <Icon {...p} path="M12 16v-4M12 8h.01M22 12a10 10 0 11-20 0 10 10 0 0120 0z" />;
+const IconSheet = (p) => <Icon {...p} path="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h6M9 17h6" />;
+
+// ---------------------------------------------------------------------------
+// Hilfsfunktionen: Normalisierung & Fuzzy-Matching
+// ---------------------------------------------------------------------------
+
+function transliterate(s) {
+  return String(s || "")
+    .toUpperCase()
+    .replace(/Ä/g, "AE")
+    .replace(/Ö/g, "OE")
+    .replace(/Ü/g, "UE")
+    .replace(/ß/g, "SS")
+    .replace(/[.,\-_/]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp = new Array(n + 1);
+  for (let j = 0; j <= n; j++) dp[j] = j;
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const tmp = dp[j];
+      dp[j] = Math.min(
+        dp[j] + 1,
+        dp[j - 1] + 1,
+        prev + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+      prev = tmp;
+    }
+  }
+  return dp[n];
+}
+
+function similarity(a, b) {
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1;
+  return 1 - levenshtein(a, b) / maxLen;
+}
+
+function extractTrailingQuantity(name) {
+  const m = String(name).trim().match(/(\d+(?:[.,]\d+)?)\s*(KG|G|ML|L)$/);
+  if (!m) return null;
+  return { value: parseFloat(m[1].replace(",", ".")), unit: m[2] };
+}
+
+function parseGermanDate(str) {
+  if (!str || typeof str !== "string") return null;
+  const m = str.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (!m) return null;
+  const [, d, mo, y] = m;
+  const date = new Date(Number(y), Number(mo) - 1, Number(d));
+  if (isNaN(date.getTime())) return null;
+  return date;
+}
+
+const METRIC_KEY_MAP = {
+  "umsatz": "umsatz",
+  "umsatz vj": "umsatzVj",
+  "menge": "menge",
+  "abschriften vk [br]": "abschriften",
+  "abschriften vk [br] vj": "abschriftenVj",
+};
+
+// ---------------------------------------------------------------------------
+// Kern: Kreuztabelle parsen
+// ---------------------------------------------------------------------------
+
+function parseKreuztabelle(aoa) {
+  const warnings = [];
+  if (!aoa || aoa.length < 5) {
+    throw new Error("Datei enthält weniger als 5 Zeilen — keine gültige Kreuztabelle.");
+  }
+  const rowMonat = aoa[0] || [];
+  const rowWoche = aoa[1] || [];
+  const rowTag = aoa[2] || [];
+  const rowMetric = aoa[3] || [];
+
+  const findCol = (label) =>
+    rowMetric.findIndex((v) => String(v || "").trim().toLowerCase() === label);
+  const colMarkt = findCol("markt");
+  const colOwg = findCol("oberwarengrp.");
+  const colWg = findCol("warengr.");
+  const colArtikelNr = findCol("artikel");
+  const colGtin = findCol("gtin");
+  const colArtikelName = colArtikelNr + 1;
+
+  if (colMarkt < 0 || colOwg < 0 || colWg < 0 || colArtikelNr < 0) {
+    throw new Error(
+      "Erwartete Spalten (Markt / Oberwarengrp. / Warengr. / Artikel) wurden in Zeile 4 nicht gefunden. " +
+      "Ist das wirklich das Blatt 'Kreuztabelle' aus dem SAP-Umsatzbericht?"
+    );
+  }
+  if (colGtin >= 0 && colArtikelName !== colGtin) {
+    warnings.push(
+      "Die Spalte mit dem Artikelnamen liegt nicht direkt vor 'GTIN' wie im bekannten Exportformat erwartet " +
+      "— Artikelnamen könnten falsch zugeordnet sein, bitte Stichprobe prüfen."
+    );
+  }
+
+  const firstBlockCol = Math.max(colGtin >= 0 ? colGtin : colArtikelName, colArtikelName) + 1;
+  const blocks = [];
+  for (let c = firstBlockCol; c < rowMetric.length; c += 5) {
+    const monat = rowMonat[c] ?? null;
+    const woche = rowWoche[c] ?? null;
+    const tag = rowTag[c] ?? null;
+    const metricLabels = [0, 1, 2, 3, 4].map((k) => String(rowMetric[c + k] || "").trim().toLowerCase());
+    const unknown = metricLabels.filter((l) => l && !(l in METRIC_KEY_MAP));
+    if (unknown.length) warnings.push(`Unerwartete Metrik-Spaltennamen ab Spalte ${c + 1}: ${unknown.join(", ")}`);
+
+    let type = "UNBEKANNT";
+    let date = null;
+    if (woche == null && tag == null) type = "GESAMT";
+    else if (tag == null) type = "MONAT_SUMME";
+    else if (String(tag).trim().toLowerCase() === "ergebnis") type = "WOCHEN_SUMME";
+    else {
+      date = parseGermanDate(String(tag));
+      type = date ? "TAG" : "UNBEKANNT";
+    }
+    blocks.push({ col: c, monat, woche, tag, type, date });
+  }
+
+  const tagesBloecke = blocks.filter((b) => b.type === "TAG");
+  const dates = tagesBloecke.map((b) => b.date).filter((d) => d != null);
+  const years = [...new Set(dates.map((d) => d.getFullYear()))].sort();
+  const minDate = dates.length ? new Date(Math.min(...dates.map((d) => d.getTime()))) : null;
+  const maxDate = dates.length ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
+  const wochenNummern = [...new Set(blocks.filter((b) => b.woche != null && b.type !== "GESAMT").map((b) => String(b.woche)))];
+
+  const markets = new Map();
+  let leafCount = 0;
+  let subtotalCount = 0;
+  let maskedMengeCount = 0;
+  const leafRows = [];
+
+  for (let r = 4; r < aoa.length; r++) {
+    const row = aoa[r];
+    if (!row) continue;
+    const markt = row[colMarkt];
+    if (markt == null || String(markt).trim() === "") continue;
+    const owg = row[colOwg] ?? null;
+    const wg = row[colWg] ?? null;
+    const artikelNr = row[colArtikelNr] ?? null;
+    const artikelName = row[colArtikelName] ?? null;
+    const gtin = colGtin >= 0 ? row[colGtin] ?? null : null;
+
+    if (artikelName == null || String(artikelName).trim() === "") {
+      subtotalCount++;
+      continue;
+    }
+    leafCount++;
+    markets.set(String(markt), (markets.get(String(markt)) || 0) + 1);
+
+    for (const b of blocks) {
+      if (b.type === "GESAMT") continue;
+      const mengeIdx = [0, 1, 2, 3, 4].findIndex(
+        (k) => String(rowMetric[b.col + k] || "").trim().toLowerCase() === "menge"
+      );
+      if (mengeIdx < 0) continue;
+      const val = row[b.col + mengeIdx];
+      if (val === "*") maskedMengeCount++;
+    }
+
+    leafRows.push({
+      rowIndex: r,
+      markt: String(markt).trim(),
+      owg: owg != null ? String(owg).trim() : "",
+      wg: wg != null ? String(wg).trim() : "",
+      artikel: String(artikelName).trim(),
+      artikelnummer: artikelNr != null ? String(artikelNr).trim() : "",
+      gtin,
+    });
+  }
+
+  return {
+    warnings, blocks, tagesBloecke, years, minDate, maxDate, wochenNummern,
+    markets: [...markets.entries()].map(([name, count]) => ({ name, count })),
+    leafCount, subtotalCount, maskedMengeCount,
+    totalDataRows: aoa.length - 4, leafRows,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 1: Masterprodukt-Clustering
+// ---------------------------------------------------------------------------
+
+function buildClusters(leafRows) {
+  const exactGroups = new Map();
+  for (const row of leafRows) {
+    const norm = transliterate(row.artikel);
+    if (!exactGroups.has(norm)) exactGroups.set(norm, { originals: new Map(), owgwg: new Map() });
+    const g = exactGroups.get(norm);
+    if (!g.originals.has(row.artikel)) g.originals.set(row.artikel, { count: 0, nrs: new Set() });
+    const o = g.originals.get(row.artikel);
+    o.count += 1;
+    if (row.artikelnummer) o.nrs.add(row.artikelnummer);
+    const key = `${row.owg}||${row.wg}`;
+    g.owgwg.set(key, (g.owgwg.get(key) || 0) + 1);
+  }
+
+  const normNames = [...exactGroups.keys()];
+  const buckets = new Map();
+  for (const n of normNames) {
+    const key = n.slice(0, 3);
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(n);
+  }
+
+  const parent = new Map(normNames.map((n) => [n, n]));
+  function find(x) {
+    while (parent.get(x) !== x) {
+      parent.set(x, parent.get(parent.get(x)));
+      x = parent.get(x);
+    }
+    return x;
+  }
+  function union(a, b) {
+    const ra = find(a), rb = find(b);
+    if (ra !== rb) parent.set(ra, rb);
+  }
+
+  const SIM_THRESHOLD = 0.86;
+  const excludedByWeight = [];
+  for (const list of buckets.values()) {
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        if (list[i] === list[j]) continue;
+        const sim = similarity(list[i], list[j]);
+        if (sim < SIM_THRESHOLD) continue;
+        const qa = extractTrailingQuantity(list[i]);
+        const qb = extractTrailingQuantity(list[j]);
+        if (qa && qb && qa.value !== qb.value) {
+          excludedByWeight.push({ a: list[i], b: list[j], sim: Math.round(sim * 100) / 100 });
+          continue;
+        }
+        union(list[i], list[j]);
+      }
+    }
+  }
+
+  const merged = new Map();
+  for (const n of normNames) {
+    const root = find(n);
+    if (!merged.has(root)) merged.set(root, { originals: new Map(), owgwg: new Map(), normVariants: new Set() });
+    const target = merged.get(root);
+    const src = exactGroups.get(n);
+    target.normVariants.add(n);
+    for (const [o, info] of src.originals) {
+      if (!target.originals.has(o)) target.originals.set(o, { count: 0, nrs: new Set() });
+      const t = target.originals.get(o);
+      t.count += info.count;
+      for (const nr of info.nrs) t.nrs.add(nr);
+    }
+    for (const [k, c] of src.owgwg) target.owgwg.set(k, (target.owgwg.get(k) || 0) + c);
+  }
+
+  const candidates = [];
+  let id = 0;
+  for (const [root, g] of merged.entries()) {
+    const originalsSorted = [...g.originals.entries()].sort((a, b) => b[1].count - a[1].count);
+    const owgwgSorted = [...g.owgwg.entries()].sort((a, b) => b[1] - a[1]);
+    const hasSpellingVariants = originalsSorted.length > 1;
+    const hasOwgWgConflict = owgwgSorted.length > 1;
+    if (!hasSpellingVariants && !hasOwgWgConflict) continue;
+
+    const [suggName] = originalsSorted[0];
+    const [suggKey] = owgwgSorted[0];
+    const [suggOwg, suggWg] = suggKey.split("||");
+
+    let conflictType = "SPELLING";
+    if (hasSpellingVariants && hasOwgWgConflict) conflictType = "BOTH";
+    else if (hasOwgWgConflict) conflictType = "OWGWG";
+
+    const accepted = conflictType === "OWGWG";
+
+    candidates.push({
+      id: id++,
+      variants: originalsSorted.map(([name, info]) => ({ name, count: info.count, nrs: [...info.nrs] })),
+      owgwgOptions: owgwgSorted.map(([key, count]) => {
+        const [owg, wg] = key.split("||");
+        return { owg, wg, count };
+      }),
+      suggestedName: suggName, suggestedOwg: suggOwg, suggestedWg: suggWg,
+      conflictType, accepted,
+      editedName: suggName, editedOwg: suggOwg, editedWg: suggWg,
+    });
+  }
+
+  candidates.sort((a, b) => {
+    const totalA = a.variants.reduce((s, v) => s + v.count, 0);
+    const totalB = b.variants.reduce((s, v) => s + v.count, 0);
+    return totalB - totalA;
+  });
+
+  return {
+    candidates,
+    totalDistinct: normNames.length,
+    totalClustersAfterMerge: merged.size,
+    excludedByWeight,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Export: bereinigte Zuordnung + Entscheidungen als .xlsx
+// ---------------------------------------------------------------------------
+
+function exportXlsx(leafRows, candidates) {
+  const nameOverride = new Map();
+  const owgWgOverride = new Map();
+
+  for (const c of candidates) {
+    if (!c.accepted) continue;
+    for (const v of c.variants) {
+      nameOverride.set(v.name, c.editedName);
+      if (c.conflictType === "OWGWG" || c.conflictType === "BOTH") {
+        owgWgOverride.set(v.name, { owg: c.editedOwg, wg: c.editedWg });
+      }
+    }
+  }
+
+  const bereinigungHeader = [
+    "Originalbezeichnung", "Oberwarengruppe (Original)", "Warengruppe (Original)",
+    "Masterprodukt (bereinigt)", "Oberwarengruppe (final)", "Warengruppe (final)", "GTIN",
+  ];
+  const bereinigungRows = leafRows.map((r) => {
+    const finalName = nameOverride.get(r.artikel) || r.artikel;
+    const ow = owgWgOverride.get(r.artikel);
+    return [
+      r.artikel, r.owg, r.wg, finalName,
+      ow ? ow.owg : r.owg, ow ? ow.wg : r.wg, r.gtin ?? "",
+    ];
+  });
+
+  const entscheidungenHeader = [
+    "Paar-Schlüssel", "Varianten (Original)", "Konflikttyp", "Übernommen",
+    "Zielprodukt", "Ziel-Oberwarengruppe", "Ziel-Warengruppe", "Gespeichert am",
+  ];
+  const now = new Date();
+  const timestamp = now.toISOString().slice(0, 19).replace("T", " ");
+  const entscheidungenRows = candidates.map((c) => [
+    c.variants.map((v) => v.name).join("||"),
+    c.variants.map((v) => `${v.name} (${v.count})`).join(" / "),
+    c.conflictType,
+    c.accepted ? "JA" : "NEIN",
+    c.editedName, c.editedOwg, c.editedWg, timestamp,
+  ]);
+
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet([bereinigungHeader, ...bereinigungRows]);
+  const ws2 = XLSX.utils.aoa_to_sheet([entscheidungenHeader, ...entscheidungenRows]);
+  ws1["!cols"] = [{ wch: 32 }, { wch: 24 }, { wch: 24 }, { wch: 32 }, { wch: 24 }, { wch: 24 }, { wch: 14 }];
+  ws2["!cols"] = [{ wch: 40 }, { wch: 45 }, { wch: 12 }, { wch: 11 }, { wch: 30 }, { wch: 24 }, { wch: 24 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, ws1, "Masterprodukte");
+  XLSX.utils.book_append_sheet(wb, ws2, "Produktentscheidungen");
+
+  const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([out], { type: "application/octet-stream" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "Bereinigung_Phase1.xlsx";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------------------
+// UI
+// ---------------------------------------------------------------------------
+
+const PHASES = [
+  { n: 0, label: "Upload" },
+  { n: 1, label: "Bereinigung" },
+  { n: 2, label: "Mengenschätzung" },
+  { n: 3, label: "Tagesbasis" },
+  { n: 4, label: "Forecast" },
+  { n: 5, label: "Portfolio" },
+  { n: 6, label: "Produktionsplan" },
+  { n: 7, label: "Bestellung" },
+  { n: 8, label: "Export" },
+];
+
+function fmtDate(d) {
+  if (!d) return "—";
+  return d.toLocaleDateString("de-DE");
+}
+
+function StepDots({ active }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {PHASES.map((p) => {
+        const isActive = p.n === active;
+        const isDone = p.n < active;
+        return (
+          <div key={p.n} className={
+            "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-mono border " +
+            (isActive ? "bg-amber-700 border-amber-800 text-amber-50"
+              : isDone ? "bg-stone-800 border-stone-800 text-stone-100"
+              : "bg-stone-100 border-stone-300 text-stone-400")
+          }>
+            <span className="font-bold">{String(p.n).padStart(2, "0")}</span>
+            <span>{p.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function StatTile({ label, value, tone = "default" }) {
+  const toneClasses = {
+    default: "border-stone-300 bg-stone-50 text-stone-900",
+    warn: "border-amber-400 bg-amber-50 text-amber-900",
+    danger: "border-red-300 bg-red-50 text-red-900",
+    ok: "border-emerald-300 bg-emerald-50 text-emerald-900",
+  };
+  return (
+    <div className={"rounded-lg border px-4 py-3 " + toneClasses[tone]}>
+      <div className="text-[11px] uppercase tracking-wide font-semibold opacity-70">{label}</div>
+      <div className="text-xl font-mono font-bold mt-0.5">{value}</div>
+    </div>
+  );
+}
+
+function ConflictBadge({ type }) {
+  const map = {
+    SPELLING: { text: "Schreibweise", cls: "bg-stone-200 text-stone-700" },
+    OWGWG: { text: "OWG/WG-Konflikt", cls: "bg-amber-200 text-amber-900" },
+    BOTH: { text: "Schreibweise + OWG/WG", cls: "bg-red-200 text-red-900" },
+  };
+  const m = map[type] || map.SPELLING;
+  return <span className={"px-2 py-0.5 rounded text-[11px] font-semibold " + m.cls}>{m.text}</span>;
+}
+
+function DecisionRow({ candidate, onChange }) {
+  const [expanded, setExpanded] = useState(false);
+  const totalCount = candidate.variants.reduce((s, v) => s + v.count, 0);
+
+  return (
+    <div className={"border rounded-lg " + (candidate.accepted ? "border-stone-300 bg-white" : "border-stone-200 bg-stone-50 opacity-60")}>
+      <div className="flex items-start gap-3 p-3">
+        <input type="checkbox" checked={candidate.accepted}
+               onChange={(e) => onChange({ ...candidate, accepted: e.target.checked })}
+               className="mt-1.5 h-4 w-4 accent-amber-700" aria-label="Übernehmen" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <ConflictBadge type={candidate.conflictType} />
+            <span className="text-xs text-stone-500 font-mono">{totalCount} Datenzeilen betroffen</span>
+            <button onClick={() => setExpanded((e) => !e)}
+                    className="ml-auto flex items-center gap-1 text-xs text-stone-500 hover:text-stone-800">
+              {expanded ? <IconChevronDown /> : <IconChevronRight />}
+              Details
+            </button>
+          </div>
+
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {candidate.variants.map((v) => (
+              <span key={v.name} className="text-xs font-mono bg-stone-100 border border-stone-200 rounded px-1.5 py-0.5"
+                    title={v.nrs?.length ? `Artikelnr.: ${v.nrs.join(", ")}` : undefined}>
+                {v.name} <span className="text-stone-400">×{v.count}</span>
+              </span>
+            ))}
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <label className="text-xs text-stone-500">
+              Zielprodukt
+              <input type="text" value={candidate.editedName}
+                     onChange={(e) => onChange({ ...candidate, editedName: e.target.value })}
+                     className="mt-0.5 w-full rounded border border-stone-300 px-2 py-1 text-sm font-mono" />
+            </label>
+            <label className="text-xs text-stone-500">
+              Ziel-Oberwarengruppe
+              <input type="text" value={candidate.editedOwg}
+                     onChange={(e) => onChange({ ...candidate, editedOwg: e.target.value })}
+                     disabled={candidate.conflictType === "SPELLING"}
+                     className="mt-0.5 w-full rounded border border-stone-300 px-2 py-1 text-sm font-mono disabled:bg-stone-100 disabled:text-stone-400" />
+            </label>
+            <label className="text-xs text-stone-500">
+              Ziel-Warengruppe
+              <input type="text" value={candidate.editedWg}
+                     onChange={(e) => onChange({ ...candidate, editedWg: e.target.value })}
+                     disabled={candidate.conflictType === "SPELLING"}
+                     className="mt-0.5 w-full rounded border border-stone-300 px-2 py-1 text-sm font-mono disabled:bg-stone-100 disabled:text-stone-400" />
+            </label>
+          </div>
+
+          {expanded && candidate.owgwgOptions.length > 1 && (
+            <div className="mt-3 text-xs text-stone-600 bg-stone-50 border border-stone-200 rounded p-2">
+              <div className="font-semibold mb-1 flex items-center gap-1"><IconInfo size={12} /> Gefundene OWG/WG-Kombinationen für dieses Produkt:</div>
+              <ul className="space-y-0.5 font-mono">
+                {candidate.owgwgOptions.map((o) => (
+                  <li key={o.owg + o.wg}>
+                    {o.owg} / {o.wg} — {o.count}× aufgetreten
+                    {o.owg === candidate.suggestedOwg && o.wg === candidate.suggestedWg && (
+                      <span className="text-emerald-700 font-semibold"> (häufigste, vorgeschlagen)</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [phase, setPhase] = useState(0);
+  const [fileName, setFileName] = useState(null);
+  const [report, setReport] = useState(null);
+  const [error, setError] = useState(null);
+  const [candidates, setCandidates] = useState(null);
+  const [clusterStats, setClusterStats] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef(null);
+
+  const handleFile = useCallback((file) => {
+    setError(null);
+    setReport(null);
+    setCandidates(null);
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: "array" });
+        const sheetName =
+          wb.SheetNames.find((n) => n.toLowerCase().includes("kreuztabelle") && !n.toLowerCase().includes("metadaten")) ||
+          wb.SheetNames[0];
+        const ws = wb.Sheets[sheetName];
+        const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: null });
+        const parsed = parseKreuztabelle(aoa);
+        parsed.sheetName = sheetName;
+        parsed.availableSheets = wb.SheetNames;
+        setReport(parsed);
+        setPhase(0);
+
+        const { candidates: cands, totalDistinct, totalClustersAfterMerge, excludedByWeight } = buildClusters(parsed.leafRows);
+        setCandidates(cands);
+        setClusterStats({ totalDistinct, totalClustersAfterMerge, totalLeafRows: parsed.leafRows.length, excludedByWeight });
+      } catch (err) {
+        setError(err.message || String(err));
+      }
+    };
+    reader.onerror = () => setError("Datei konnte nicht gelesen werden.");
+    reader.readAsArrayBuffer(file);
+  }, []);
+
+  const onDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) handleFile(f);
+  }, [handleFile]);
+
+  const acceptedCount = useMemo(
+    () => (candidates ? candidates.filter((c) => c.accepted).length : 0),
+    [candidates]
+  );
+
+  const updateCandidate = (updated) => {
+    setCandidates((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+  };
+
+  const setAll = (accepted) => {
+    setCandidates((prev) => prev.map((c) => ({ ...c, accepted })));
+  };
+
+  return (
+    <div className="min-h-screen bg-stone-100 text-stone-900 font-sans">
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        <div className="mb-6">
+          <div className="flex items-baseline gap-3 flex-wrap">
+            <h1 className="font-serif text-3xl font-bold tracking-tight text-stone-900">Backwaren-Planung</h1>
+            <span className="font-mono text-xs text-stone-500 bg-white border border-stone-300 rounded px-2 py-0.5">
+              ELH · NST · OED
+            </span>
+          </div>
+          <p className="text-stone-600 text-sm mt-1 max-w-2xl">
+            Phase 0 (Upload &amp; Validierung) und Phase 1 (Bereinigung / Masterprodukte inkl.
+            OWG/WG-Konsolidierung) — läuft vollständig im Browser, keine Datei verlässt diesen Rechner.
+          </p>
+          <div className="mt-4">
+            <StepDots active={phase} />
+          </div>
+        </div>
+
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+          className={
+            "rounded-xl border-2 border-dashed p-8 text-center transition-colors " +
+            (dragOver ? "border-amber-600 bg-amber-50" : "border-stone-300 bg-white")
+          }
+        >
+          <input ref={inputRef} type="file" accept=".xlsx,.xlsm" className="hidden"
+                 onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+          <div className="mx-auto mb-2 text-stone-400 flex justify-center"><IconUpload size={28} /></div>
+          <p className="text-stone-700 font-medium">Kreuztabelle (.xlsx) hierher ziehen</p>
+          <p className="text-stone-500 text-sm mt-1">
+            oder{" "}
+            <button onClick={() => inputRef.current?.click()} className="text-amber-700 underline font-semibold">
+              Datei auswählen
+            </button>
+          </p>
+          {fileName && <p className="text-xs text-stone-400 mt-3 font-mono">Geladen: {fileName}</p>}
+        </div>
+
+        {error && (
+          <div className="mt-4 rounded-lg border border-red-300 bg-red-50 text-red-800 p-4 flex gap-2 items-start">
+            <IconAlert size={18} className="shrink-0 mt-0.5" />
+            <div>
+              <div className="font-semibold text-sm">Datei konnte nicht als Kreuztabelle erkannt werden</div>
+              <div className="text-sm mt-0.5">{error}</div>
+            </div>
+          </div>
+        )}
+
+        {report && (
+          <div className="mt-8">
+            <div className="flex items-center gap-2 mb-3">
+              <IconSheet size={18} className="text-stone-500" />
+              <h2 className="font-serif text-xl font-bold">Phase 0 — Validierungsbericht</h2>
+              <span className="text-xs font-mono text-stone-400">Blatt: {report.sheetName}</span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatTile label="Datenzeilen gesamt" value={report.totalDataRows} />
+              <StatTile label="Artikelzeilen (Leaf)" value={report.leafCount} tone="ok" />
+              <StatTile label="Zwischensummen-Zeilen" value={report.subtotalCount} />
+              <StatTile label="Maskierte Mengen (*)" value={report.maskedMengeCount}
+                        tone={report.maskedMengeCount > 0 ? "warn" : "ok"} />
+              <StatTile label="Erkannte Märkte" value={report.markets.length} />
+              <StatTile label="Erkannte Wochen" value={report.wochenNummern.length} />
+              <StatTile label="Tagesblöcke gesamt" value={report.tagesBloecke.length} />
+              <StatTile label="Zeitraum" value={`${fmtDate(report.minDate)} – ${fmtDate(report.maxDate)}`} />
+            </div>
+
+            <div className="mt-4 grid sm:grid-cols-2 gap-4">
+              <div className="rounded-lg border border-stone-300 bg-white p-4">
+                <div className="text-xs uppercase tracking-wide font-semibold text-stone-500 mb-2">Märkte in dieser Datei</div>
+                <ul className="text-sm font-mono space-y-1">
+                  {report.markets.map((m) => (
+                    <li key={m.name} className="flex justify-between border-b border-stone-100 pb-1">
+                      <span>{m.name}</span>
+                      <span className="text-stone-400">{m.count} Zeilen</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-lg border border-stone-300 bg-white p-4">
+                <div className="text-xs uppercase tracking-wide font-semibold text-stone-500 mb-2">Jahre in Vergleichsdaten</div>
+                <p className="text-sm text-stone-700">
+                  {report.years.length ? report.years.join(", ") : "keine Tagesdaten erkannt"} — Vergleich erfolgt
+                  laut Exportstruktur über Kalenderwoche + Wochentag (nicht über das Datum selbst).
+                </p>
+                {report.warnings.length > 0 && (
+                  <div className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">
+                    {report.warnings.map((w, i) => (<div key={i}>⚠ {w}</div>))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {candidates && (
+          <div className="mt-10">
+            <div className="flex items-center gap-2 mb-1">
+              <IconCheck size={18} className="text-stone-500" />
+              <h2 className="font-serif text-xl font-bold">Phase 1 — Bereinigung &amp; Masterprodukte</h2>
+            </div>
+            <p className="text-sm text-stone-600 mb-4">
+              {clusterStats.totalDistinct} unterschiedliche Artikel-Schreibweisen gefunden →{" "}
+              {clusterStats.totalClustersAfterMerge} Masterprodukte nach automatischer Vor-Gruppierung.{" "}
+              <strong>{candidates.length}</strong> davon brauchen eine Entscheidung (Rechtschreibvariante
+              und/oder abweichende Oberwarengruppe/Warengruppe über die Zeit). Alles andere ist bereits
+              eindeutig und wird unverändert übernommen.
+            </p>
+
+            {clusterStats.excludedByWeight.length > 0 && (
+              <div className="mb-4 text-xs text-stone-600 bg-white border border-stone-200 rounded-lg p-3">
+                <div className="font-semibold text-stone-700 mb-1 flex items-center gap-1">
+                  <IconInfo size={13} /> {clusterStats.excludedByWeight.length} ähnliche Namenspaare bewusst NICHT vorgeschlagen
+                </div>
+                <p className="mb-1.5">
+                  Diese Paare unterscheiden sich nur durch eine abweichende Gebindegröße/Menge am Ende der
+                  Bezeichnung — das deutet auf tatsächlich unterschiedliche Artikel hin (nicht auf einen
+                  Schreibfehler), deshalb keine automatische Zusammenführung:
+                </p>
+                <ul className="font-mono space-y-0.5 max-h-28 overflow-y-auto">
+                  {clusterStats.excludedByWeight.map((p, i) => (
+                    <li key={i} className="text-stone-500">{p.a} ↔ {p.b}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {candidates.length === 0 ? (
+              <div className="rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 p-4 text-sm">
+                Keine offenen Fälle — alle Artikel sind eindeutig einem Masterprodukt und einer
+                Oberwarengruppe/Warengruppe zugeordnet.
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-2 mb-3">
+                  <button onClick={() => setAll(true)}
+                          className="text-xs font-semibold px-3 py-1.5 rounded border border-stone-300 bg-white hover:bg-stone-50">
+                    Alle übernehmen
+                  </button>
+                  <button onClick={() => setAll(false)}
+                          className="text-xs font-semibold px-3 py-1.5 rounded border border-stone-300 bg-white hover:bg-stone-50 flex items-center gap-1">
+                    <IconReset size={12} /> Alle zurücksetzen
+                  </button>
+                  <span className="ml-auto text-xs text-stone-500 self-center font-mono">
+                    {acceptedCount} / {candidates.length} übernommen
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {candidates.map((c) => (
+                    <DecisionRow key={c.id} candidate={c} onChange={updateCandidate} />
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="mt-6 flex items-center gap-3">
+              <button onClick={() => exportXlsx(report.leafRows, candidates)}
+                      className="flex items-center gap-2 bg-amber-700 hover:bg-amber-800 text-amber-50 font-semibold px-4 py-2.5 rounded-lg text-sm">
+                <IconDownload size={16} />
+                Bereinigung als .xlsx exportieren
+              </button>
+              <span className="text-xs text-stone-500">
+                Enthält Blatt „Masterprodukte" (alle {report.leafCount} Artikelzeilen mit finaler
+                Zuordnung) und „Produktentscheidungen" (Protokoll aller getroffenen Entscheidungen).
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-12 pt-4 border-t border-stone-300 text-xs text-stone-400">
+          Nächste Phasen (2–8: Mengenschätzung, Tagesbasis, Forecast, Portfolio, Produktionsplan, Bestellung,
+          Export) folgen als eigene Ausbaustufen, sobald Phase 0+1 an echten Daten für ELH/NST/OED bestätigt sind.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
