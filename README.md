@@ -1,31 +1,38 @@
-# Bestelltool V2 – Drive-Lernbasis
+# Bestelltool V3 – Stammdaten / Produktzuordnung
 
-Diese Version erweitert die bestehende Browser-App um:
+Neu in V3:
 
-- Planungskontext: Markt, Abteilung (YBB/YBA), Planjahr und Ziel-KW
-- getrennte Ansichten `Planung` und `Daten & Stammdaten`
-- bestehender SAP-Import und Masterprodukt-Bereinigung bleiben erhalten
-- Normalisierung der SAP-Tagesdaten für eine persistente Lernbasis
-- serverseitige Google-Drive-Anbindung über `/api/drive`
-- automatische Ordnerstruktur:
-  `Forecast-App / MARKT / ABTEILUNG / SAP / JAHR / Plan_KWxx / lernbase.json`
-- dieselbe Plan-KW wird beim erneuten Speichern aktualisiert statt als zweiter Forecast-Datensatz angelegt
+- eigener Reiter **Stammdaten**
+- Suche und Filter nach OWG/WG, Produkt oder Artikelnummer
+- Masterprodukt, Ziel-Oberwarengruppe und Ziel-Warengruppe direkt bearbeitbar
+- dauerhafte Speicherung in Google Drive unter `Forecast-App/Stammdaten/MARKT/ABTEILUNG/masterdata.json`
+- beim nächsten SAP-Upload werden bekannte Artikelnummern automatisch mit der gespeicherten fachlichen Zuordnung geladen
+- SAP-Originalwerte bleiben erhalten; Lernbasis/Forecast verwenden die Master-Zuordnung
+- automatische Abteilungstrennung: `BAKE OFF` / `TK-BAKE OFF` -> YBA, übrige Marktbäckerei -> YBB
 
-## Vercel Environment Variable
+Beispiel: Cappuccino Groß aus einer falschen TK-Kleingebäck-Gruppe nach `GASTRONOMIE MARKTKÜCHE / HEIßGETRÄNKE (MARKTKÜCHE)` verschieben und einmal speichern.
 
-Erforderlich:
+## Vercel
 
-`GOOGLE_SERVICE_ACCOUNT_JSON`
+Die bestehende Environment Variable `GOOGLE_SERVICE_ACCOUNT_JSON` bleibt unverändert. Nach dem GitHub-Commit deployt Vercel automatisch.
 
-Optional, falls mehrere Ordner namens Forecast-App existieren:
+## Nächste Phase
 
-`GOOGLE_DRIVE_ROOT_FOLDER_ID`
+Sortimentsauswahl je Markt/Abteilung/KW, danach Forecast, Produktionsplan und Bestellung.
 
-Optional für einen anderen Root-Namen:
 
-`GOOGLE_DRIVE_ROOT_FOLDER_NAME`
+## V3.1 – Fix für HTTP 413
 
-## Noch nicht enthalten
+Große SAP-Importe werden beim Speichern nicht mehr als ein einzelner Request übertragen.
+Die App teilt die normalisierten Tagesdaten automatisch in Blöcke zu 300 Datensätzen.
 
-Sortimentsauswahl, Forecast, Produktionsplan und Bestelllogik sind bewusst noch nicht implementiert.
-Diese Funktionen werden in den nächsten Ausbaustufen auf der gespeicherten Datenbasis aufgebaut.
+Drive-Struktur je Planwoche:
+
+- `lernbase.json` – Manifest, Bericht und Masterentscheidungen
+- `facts_0001.json`
+- `facts_0002.json`
+- usw.
+
+Der Nutzer klickt weiterhin nur einmal auf **In Google Drive als Lernbasis speichern**.
+Die Oberfläche zeigt dabei den Fortschritt `Speichere X von Y Datensätzen`.
+Erst wenn alle Datenblöcke vorhanden sind, wird das Manifest auf `status: complete` gesetzt.

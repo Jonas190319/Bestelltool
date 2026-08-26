@@ -74,6 +74,11 @@ input{font:inherit;}
 .nav-btn{border:1px solid #d6d3d1;background:#fff;color:#57534e;border-radius:.5rem;padding:.55rem .9rem;font-weight:600;}
 .nav-btn.active{background:#292524;color:#fff;border-color:#292524;}
 select{font:inherit;}
+table{border-collapse:collapse;}
+.master-table th,.master-table td{border-bottom:1px solid #e7e5e4;padding:.5rem;vertical-align:top;}
+.master-table th{position:sticky;top:0;background:#f5f5f4;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#57534e;z-index:1;}
+.master-table input{width:100%;min-width:180px;border:1px solid #d6d3d1;border-radius:.35rem;padding:.35rem .45rem;}
+.master-table .small-input{min-width:220px;}
 code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
 </style>
 </head>
@@ -249,6 +254,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
         }
         facts.push({
           marktOriginal: leaf.markt,
+          department: inferDepartmentFromOwg(leaf.owg),
           owg: leaf.owg,
           wg: leaf.wg,
           artikel: leaf.artikel,
@@ -266,6 +272,80 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
       });
     });
     return facts;
+  }
+
+
+  function inferDepartmentFromOwg(owg) {
+    var s = transliterate(owg || "");
+    return (s.indexOf("BAKE OFF") >= 0 || s.indexOf("TK BAKE OFF") >= 0) ? "YBA" : "YBB";
+  }
+
+  function masterKey(r) {
+    if (r.artikelnummer) return "A:" + String(r.artikelnummer);
+    if (r.gtin) return "G:" + String(r.gtin);
+    return "N:" + transliterate(r.artikel || r.sourceName || r.masterName || "");
+  }
+
+  function buildMasterRows(leafRows) {
+    var map = new Map();
+    (leafRows || []).forEach(function (r) {
+      var dept = inferDepartmentFromOwg(r.owg);
+      var key = masterKey(r);
+      if (!map.has(key)) {
+        map.set(key, {
+          key:key,
+          department:dept,
+          artikelnummer:r.artikelnummer || "",
+          gtin:r.gtin != null ? String(r.gtin) : "",
+          sourceName:r.artikel || "",
+          sourceOwg:r.owg || "",
+          sourceWg:r.wg || "",
+          masterName:r.artikel || "",
+          targetOwg:r.owg || "",
+          targetWg:r.wg || "",
+          active:true,
+          updatedAt:null
+        });
+      }
+    });
+    return Array.from(map.values()).sort(function(a,b){
+      return (a.targetOwg + "|" + a.targetWg + "|" + a.masterName).localeCompare(b.targetOwg + "|" + b.targetWg + "|" + b.masterName, "de");
+    });
+  }
+
+  function mergeMasterRows(baseRows, savedRows, department) {
+    var out = new Map();
+    (baseRows || []).filter(function(r){return r.department === department;}).forEach(function(r){out.set(r.key, Object.assign({}, r));});
+    (savedRows || []).filter(function(r){return !r.department || r.department === department;}).forEach(function(s){
+      var k = s.key || masterKey(s);
+      var cur = out.get(k) || {
+        key:k, department:department, artikelnummer:s.artikelnummer||"", gtin:s.gtin||"",
+        sourceName:s.sourceName||s.masterName||"", sourceOwg:s.sourceOwg||s.targetOwg||"", sourceWg:s.sourceWg||s.targetWg||""
+      };
+      out.set(k, Object.assign({}, cur, s, {key:k, department:department}));
+    });
+    return Array.from(out.values()).sort(function(a,b){
+      return (a.targetOwg + "|" + a.targetWg + "|" + a.masterName).localeCompare(b.targetOwg + "|" + b.targetWg + "|" + b.masterName, "de");
+    });
+  }
+
+  function applyMasterMappingsToFacts(facts, rows, department) {
+    var map = new Map();
+    (rows || []).forEach(function(r){ map.set(r.key || masterKey(r), r); });
+    return (facts || []).filter(function(f){ return (f.department || inferDepartmentFromOwg(f.owg)) === department; }).map(function(f){
+      var r = map.get(masterKey(f));
+      if (!r) return Object.assign({}, f, {department:department});
+      return Object.assign({}, f, {
+        department:department,
+        artikelOriginal:f.artikel,
+        owgOriginal:f.owg,
+        wgOriginal:f.wg,
+        artikel:r.masterName || f.artikel,
+        owg:r.targetOwg || f.owg,
+        wg:r.targetWg || f.wg,
+        masterMapped:true
+      });
+    });
   }
 
   function apiJson(url, options) {
@@ -674,6 +754,16 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
     var driveStateObj = useState({status:"unbekannt", message:""}); var driveState = driveStateObj[0], setDriveState = driveStateObj[1];
     var saveState = useState(false); var savingDrive = saveState[0], setSavingDrive = saveState[1];
 
+    // V3: persistente Stammdaten / Produktzuordnung
+    var rawMasterState = useState([]); var rawMasterRows = rawMasterState[0], setRawMasterRows = rawMasterState[1];
+    var masterState = useState([]); var masterRows = masterState[0], setMasterRows = masterState[1];
+    var masterSearchState = useState(""); var masterSearch = masterSearchState[0], setMasterSearch = masterSearchState[1];
+    var masterOwgState = useState(""); var masterOwgFilter = masterOwgState[0], setMasterOwgFilter = masterOwgState[1];
+    var masterWgState = useState(""); var masterWgFilter = masterWgState[0], setMasterWgFilter = masterWgState[1];
+    var masterDiffState = useState(false); var onlyMasterDiff = masterDiffState[0], setOnlyMasterDiff = masterDiffState[1];
+    var masterStatusState = useState({status:"",message:""}); var masterStatus = masterStatusState[0], setMasterStatus = masterStatusState[1];
+    var masterSavingState = useState(false); var masterSaving = masterSavingState[0], setMasterSaving = masterSavingState[1];
+
     var handleFile = useCallback(function (file) {
       setError(null); setReport(null); setCandidates(null); setFileName(file.name);
       var reader = new FileReader();
@@ -688,6 +778,10 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
           parsed.sheetName = sheetName;
           parsed.availableSheets = wb.SheetNames;
           setDailyFacts(extractDailyFacts(aoa, parsed));
+          var baseMasters = buildMasterRows(parsed.leafRows);
+          setRawMasterRows(baseMasters);
+          setMasterRows(baseMasters.filter(function(r){return r.department === department;}));
+          loadMasterData(baseMasters, department);
           setReport(parsed);
           setPhase(0);
           var built = buildClusters(parsed.leafRows);
@@ -699,7 +793,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
       };
       reader.onerror = function () { setError("Datei konnte nicht gelesen werden."); };
       reader.readAsArrayBuffer(file);
-    }, []);
+    }, [marketCode, department]);
 
     var onDrop = useCallback(function (e) {
       e.preventDefault(); setDragOver(false);
@@ -716,6 +810,45 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
       setCandidates(function (prev) { return prev.map(function (c) { return Object.assign({}, c, { accepted: accepted }); }); });
     }
 
+
+    function loadMasterData(baseRows, dept) {
+      var d = dept || department;
+      setMasterStatus({status:"lädt", message:"Gespeicherte Stammdaten werden geladen…"});
+      apiJson("/api/drive?action=masterdata&market=" + encodeURIComponent(marketCode) + "&department=" + encodeURIComponent(d)).then(function(r){
+        var merged = mergeMasterRows(baseRows || rawMasterRows, r.records || [], d);
+        setMasterRows(merged);
+        setMasterStatus({status:"ok", message:(r.records || []).length + " gespeicherte Stammdatensätze geladen. " + merged.length + " Produkte aktuell verfügbar."});
+      }).catch(function(e){
+        setMasterRows((baseRows || rawMasterRows).filter(function(r){return r.department === d;}));
+        setMasterStatus({status:"fehler", message:e.message});
+      });
+    }
+
+    function updateMasterRow(key, patch) {
+      setMasterRows(function(prev){ return prev.map(function(r){
+        return r.key === key ? Object.assign({}, r, patch, {updatedAt:new Date().toISOString()}) : r;
+      });});
+    }
+
+    function resetMasterRow(key) {
+      setMasterRows(function(prev){ return prev.map(function(r){
+        if (r.key !== key) return r;
+        return Object.assign({}, r, {masterName:r.sourceName, targetOwg:r.sourceOwg, targetWg:r.sourceWg, updatedAt:new Date().toISOString()});
+      });});
+    }
+
+    function saveMasterData() {
+      setMasterSaving(true);
+      setMasterStatus({status:"lädt", message:"Stammdaten werden in Google Drive gespeichert…"});
+      apiJson("/api/drive", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"saveMasterData", market:marketCode, department:department, records:masterRows, savedAt:new Date().toISOString()})
+      }).then(function(r){
+        setMasterStatus({status:"ok", message:"Gespeichert: " + r.path + " (" + r.records + " Produkte)"});
+      }).catch(function(e){setMasterStatus({status:"fehler", message:e.message});})
+      .finally(function(){setMasterSaving(false);});
+    }
+
     function checkDrive() {
       setDriveState({status:"prüft", message:"Drive-Verbindung wird geprüft…"});
       apiJson("/api/drive?action=status").then(function (r) {
@@ -725,50 +858,97 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
       });
     }
 
-    function saveLearningSnapshot() {
+    async function saveLearningSnapshot() {
       if (!report || !candidates) return;
+
       setSavingDrive(true);
-      setDriveState({status:"prüft", message:"Lernbasis wird gespeichert…"});
-      var payload = {
-        action: "saveSapSnapshot",
-        market: marketCode,
-        department: department,
-        targetYear: Number(targetYear),
-        targetWeek: Number(targetWeek),
-        sourceFileName: fileName || "SAP-Upload.xlsx",
-        uploadedAt: new Date().toISOString(),
-        report: {
-          sheetName: report.sheetName,
-          years: report.years,
-          minDate: report.minDate ? report.minDate.toISOString() : null,
-          maxDate: report.maxDate ? report.maxDate.toISOString() : null,
-          weeks: report.wochenNummern,
-          marketsDetected: report.markets,
-          leafCount: report.leafCount,
-          maskedMengeCount: report.maskedMengeCount,
-          warnings: report.warnings
-        },
-        masterDecisions: candidates.map(function (c) {
-          return {
-            variants: c.variants,
-            conflictType: c.conflictType,
-            accepted: c.accepted,
-            targetProduct: c.editedName,
-            targetOWG: c.editedOwg,
-            targetWG: c.editedWg
-          };
-        }),
-        dailyFacts: dailyFacts
-      };
-      apiJson("/api/drive", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(payload)
-      }).then(function (r) {
-        setDriveState({status:"ok", message:"Gespeichert: " + r.path});
-      }).catch(function (e) {
+      try {
+        var mappedFacts = applyMasterMappingsToFacts(dailyFacts, masterRows, department);
+        var CHUNK_SIZE = 300;
+        var totalChunks = Math.max(1, Math.ceil(mappedFacts.length / CHUNK_SIZE));
+        var uploadId = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+
+        var base = {
+          market: marketCode,
+          department: department,
+          targetYear: Number(targetYear),
+          targetWeek: Number(targetWeek),
+          uploadId: uploadId
+        };
+
+        setDriveState({status:"prüft", message:"Speicherung wird vorbereitet…"});
+        await apiJson("/api/drive", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify(Object.assign({}, base, {
+            action: "saveSapSnapshotInit",
+            sourceFileName: fileName || "SAP-Upload.xlsx",
+            uploadedAt: new Date().toISOString(),
+            totalRows: mappedFacts.length,
+            totalChunks: totalChunks,
+            report: {
+              sheetName: report.sheetName,
+              years: report.years,
+              minDate: report.minDate ? report.minDate.toISOString() : null,
+              maxDate: report.maxDate ? report.maxDate.toISOString() : null,
+              weeks: report.wochenNummern,
+              marketsDetected: report.markets,
+              leafCount: report.leafCount,
+              maskedMengeCount: report.maskedMengeCount,
+              warnings: report.warnings
+            },
+            masterDecisions: candidates.map(function (c) {
+              return {
+                variants: c.variants,
+                conflictType: c.conflictType,
+                accepted: c.accepted,
+                targetProduct: c.editedName,
+                targetOWG: c.editedOwg,
+                targetWG: c.editedWg
+              };
+            }),
+            masterDataVersion: 3
+          }))
+        });
+
+        for (var i = 0; i < totalChunks; i++) {
+          var start = i * CHUNK_SIZE;
+          var chunk = mappedFacts.slice(start, start + CHUNK_SIZE);
+          var done = Math.min(start + chunk.length, mappedFacts.length);
+          setDriveState({
+            status:"prüft",
+            message:"Speichere " + done + " von " + mappedFacts.length + " Datensätzen… (" + (i + 1) + "/" + totalChunks + ")"
+          });
+
+          await apiJson("/api/drive", {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify(Object.assign({}, base, {
+              action: "saveSapSnapshotChunk",
+              chunkIndex: i + 1,
+              rows: chunk
+            }))
+          });
+        }
+
+        setDriveState({status:"prüft", message:"Speicherung wird abgeschlossen…"});
+        var result = await apiJson("/api/drive", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify(Object.assign({}, base, {
+            action: "saveSapSnapshotFinalize"
+          }))
+        });
+
+        setDriveState({
+          status:"ok",
+          message:"Erfolgreich gespeichert: " + result.path + " (" + mappedFacts.length + " Datensätze)"
+        });
+      } catch (e) {
         setDriveState({status:"fehler", message:e.message});
-      }).finally(function () { setSavingDrive(false); });
+      } finally {
+        setSavingDrive(false);
+      }
     }
 
     var children = [];
@@ -779,13 +959,14 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
         cxEl("h1", "font-serif text-3xl font-bold tracking-tight text-stone-900", { key: "h1" }, ["Backwaren-Planung"]),
         cxEl("span", "font-mono text-xs text-stone-500 bg-white border border-stone-300 rounded px-2 py-0.5", { key: "badge" }, ["ELH · NST · OED"])
       ]),
-      cxEl("p", "text-stone-600 text-sm mt-1 max-w-2xl", { key: "sub" }, ["V2 — Planungskontext, SAP-Import, Masterbereinigung und persistente Lernbasis in Google Drive. Forecast und Sortiment werden als nächste Phasen darauf aufgebaut."]),
+      cxEl("p", "text-stone-600 text-sm mt-1 max-w-2xl", { key: "sub" }, ["V3.1 — Planungskontext, SAP-Import, persistente Lernbasis mit blockweiser Speicherung und bearbeitbare Stammdaten in Google Drive. Forecast und Sortiment werden als nächste Phasen darauf aufgebaut."]),
       cxEl("div", "mt-4", { key: "dots" }, [h(StepDots, { active: phase })])
     ]));
 
-    children.push(cxEl("div", "flex gap-2 mb-5", {key:"nav"}, [
+    children.push(cxEl("div", "flex gap-2 mb-5 flex-wrap", {key:"nav"}, [
       h("button", {className:"nav-btn " + (view === "planung" ? "active" : ""), onClick:function(){setView("planung");}}, "Planung"),
-      h("button", {className:"nav-btn " + (view === "daten" ? "active" : ""), onClick:function(){setView("daten");}}, "Daten & Stammdaten")
+      h("button", {className:"nav-btn " + (view === "daten" ? "active" : ""), onClick:function(){setView("daten");}}, "Daten-Upload"),
+      h("button", {className:"nav-btn " + (view === "stamm" ? "active" : ""), onClick:function(){setView("stamm"); loadMasterData(rawMasterRows, department);}}, "Stammdaten")
     ]));
 
     children.push(cxEl("div", "rounded-xl border border-stone-300 bg-white p-4 mb-6", {key:"context"}, [
@@ -899,6 +1080,14 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
             cxEl("p", "text-sm text-stone-700", { key: "p" }, [(report.years.length ? report.years.join(", ") : "keine Tagesdaten erkannt") + " — Vergleich erfolgt laut Exportstruktur über Kalenderwoche + Wochentag (nicht über das Datum selbst)."]),
             report.warnings.length > 0 ? cxEl("div", "mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2", { key: "w" }, report.warnings.map(function (w, i) { return h("div", { key: i }, "⚠ " + w); })) : null
           ])
+        ]),
+        cxEl("div", "mt-4 rounded-lg border border-stone-300 bg-white p-4 text-sm", {key:"deptsplit"}, [
+          cxEl("div", "font-semibold", null, ["Automatische Abteilungstrennung"]),
+          cxEl("div", "mt-1 text-stone-600", null, [
+            "YBA (Backoff) = OWG BAKE OFF / TK-BAKE OFF. Alle übrigen Marktbäckerei-OWG werden YBB zugeordnet. Aktuell im Upload: YBB ",
+            String(rawMasterRows.filter(function(r){return r.department==="YBB";}).length), " Produkte · YBA ",
+            String(rawMasterRows.filter(function(r){return r.department==="YBA";}).length), " Produkte."
+          ])
         ])
       ]));
     }
@@ -955,10 +1144,75 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
       ]));
     }
 
-    } // Ende Daten & Stammdaten
+    } // Ende Daten-Upload
+
+    if (view === "stamm") {
+      var owgValues = Array.from(new Set(masterRows.map(function(r){return r.targetOwg || "";}).filter(Boolean))).sort(function(a,b){return a.localeCompare(b,"de");});
+      var wgValues = Array.from(new Set(masterRows.filter(function(r){return !masterOwgFilter || r.targetOwg === masterOwgFilter;}).map(function(r){return r.targetWg || "";}).filter(Boolean))).sort(function(a,b){return a.localeCompare(b,"de");});
+      var q = transliterate(masterSearch);
+      var filteredMasters = masterRows.filter(function(r){
+        if (masterOwgFilter && r.targetOwg !== masterOwgFilter) return false;
+        if (masterWgFilter && r.targetWg !== masterWgFilter) return false;
+        if (onlyMasterDiff && r.masterName === r.sourceName && r.targetOwg === r.sourceOwg && r.targetWg === r.sourceWg) return false;
+        if (q) {
+          var hay = transliterate([r.masterName,r.sourceName,r.targetOwg,r.targetWg,r.artikelnummer,r.gtin].join(" "));
+          if (hay.indexOf(q) < 0) return false;
+        }
+        return true;
+      });
+      var visibleMasters = filteredMasters.slice(0, 200);
+
+      children.push(cxEl("div", "rounded-xl border border-stone-300 bg-white p-5", {key:"masterEditor"}, [
+        cxEl("div", "flex items-start justify-between gap-3 flex-wrap", null, [
+          h("div", null, [
+            cxEl("div", "font-serif text-xl font-bold", null, ["Stammdaten / Produktzuordnung — " + marketCode + " · " + department]),
+            cxEl("p", "text-sm text-stone-600 mt-1", null, ["SAP-Original bleibt unverändert. Hier wird die fachliche Master-Zuordnung gespeichert. Beim nächsten Upload derselben Artikelnummer wird diese Zuordnung automatisch wieder verwendet."])
+          ]),
+          cxEl("div", "flex gap-2", null, [
+            cxEl("button", "text-xs font-semibold px-3 py-2 rounded border border-stone-300 bg-white", {onClick:function(){loadMasterData(rawMasterRows, department);}}, ["Neu laden"]),
+            cxEl("button", "bg-amber-700 text-amber-50 font-semibold px-4 py-2 rounded-lg text-sm", {disabled:masterSaving, onClick:saveMasterData}, [masterSaving ? "Speichert…" : "Stammdaten speichern"])
+          ])
+        ]),
+        masterStatus.message ? cxEl("div", "mt-3 text-xs " + (masterStatus.status==="fehler" ? "text-red-800" : masterStatus.status==="ok" ? "text-emerald-700" : "text-stone-500"), null, [masterStatus.message]) : null,
+        cxEl("div", "mt-5 grid grid-cols-1 sm:grid-cols-4 gap-3", null, [
+          cxEl("label", "text-xs text-stone-500", null, ["Suche Produkt / Artikelnummer",
+            h("input", {type:"text", value:masterSearch, onChange:function(e){setMasterSearch(e.target.value);}, placeholder:"z. B. Cappuccino oder Brezel", className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"})
+          ]),
+          cxEl("label", "text-xs text-stone-500", null, ["Oberwarengruppe",
+            h("select", {value:masterOwgFilter, onChange:function(e){setMasterOwgFilter(e.target.value);setMasterWgFilter("");}, className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"}, [h("option",{value:""},"Alle OWG")].concat(owgValues.map(function(v){return h("option",{key:v,value:v},v);})))
+          ]),
+          cxEl("label", "text-xs text-stone-500", null, ["Warengruppe",
+            h("select", {value:masterWgFilter, onChange:function(e){setMasterWgFilter(e.target.value);}, className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"}, [h("option",{value:""},"Alle WG")].concat(wgValues.map(function(v){return h("option",{key:v,value:v},v);})))
+          ]),
+          cxEl("label", "text-xs text-stone-500 flex items-center gap-2 pt-6", null, [
+            h("input", {type:"checkbox", checked:onlyMasterDiff, onChange:function(e){setOnlyMasterDiff(e.target.checked);}}), "Nur geänderte Zuordnungen"
+          ])
+        ]),
+        cxEl("div", "mt-3 text-xs text-stone-500", null, [filteredMasters.length + " Treffer. Maximal 200 werden gleichzeitig angezeigt. Für größere Gruppen bitte OWG/WG oder Suche verwenden."]),
+        cxEl("div", "mt-3 overflow-y-auto border border-stone-200 rounded-lg", {style:{maxHeight:"620px"}}, [
+          h("table", {className:"master-table w-full text-sm"}, [
+            h("thead", null, h("tr", null, [
+              h("th",null,"Artikel / Nr."), h("th",null,"SAP-Original"), h("th",null,"Masterprodukt"), h("th",null,"Ziel-OWG"), h("th",null,"Ziel-WG"), h("th",null,"Aktion")
+            ])),
+            h("tbody", null, visibleMasters.map(function(r){
+              var changed = r.masterName !== r.sourceName || r.targetOwg !== r.sourceOwg || r.targetWg !== r.sourceWg;
+              return h("tr", {key:r.key, style:changed ? {backgroundColor:"#fffbeb"} : null}, [
+                h("td", null, [h("div",{style:{fontWeight:600}},r.sourceName), h("div",{style:{fontSize:"11px",color:"#78716c"}},r.artikelnummer || r.gtin || r.key)]),
+                h("td", null, [h("div",{style:{fontSize:"11px"}},r.sourceOwg), h("div",{style:{fontSize:"11px",color:"#78716c",marginTop:"4px"}},r.sourceWg)]),
+                h("td", null, h("input", {value:r.masterName || "", onChange:function(e){updateMasterRow(r.key,{masterName:e.target.value});}})),
+                h("td", null, h("input", {className:"small-input", value:r.targetOwg || "", onChange:function(e){updateMasterRow(r.key,{targetOwg:e.target.value});}})),
+                h("td", null, h("input", {className:"small-input", value:r.targetWg || "", onChange:function(e){updateMasterRow(r.key,{targetWg:e.target.value});}})),
+                h("td", null, cxEl("button", "text-xs font-semibold px-2 py-1 rounded border border-stone-300 bg-white", {onClick:function(){resetMasterRow(r.key);}}, ["Original"] ))
+              ]);
+            }))
+          ])
+        ]),
+        cxEl("div", "mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900", null, ["Beispiel: Cappuccino Groß aus TK-Kleingebäck nach GASTRONOMIE MARKTKÜCHE / HEIßGETRÄNKE verschieben und speichern. Beim nächsten SAP-Upload bleibt die SAP-Zeile im Original erhalten, Forecast und Planung verwenden aber automatisch die gespeicherte Master-Zuordnung."])
+      ]));
+    }
 
     children.push(cxEl("div", "mt-12 pt-4 border-t border-stone-300 text-xs text-stone-400", { key: "footer" }, [
-      "V2 Basis: Planungskontext + SAP-Import + Masterbereinigung + Google-Drive-Lernbasis. Nächster Schritt: Sortimentsauswahl je Markt/Abteilung/KW und danach Forecast."
+      "V3 Basis: SAP-Import + Google-Drive-Lernbasis + persistente Stammdaten/Produktzuordnung. Nächster Schritt: Sortimentsauswahl je Markt/Abteilung/KW und danach Forecast."
     ]));
 
     return cxEl("div", "min-h-screen bg-stone-100 text-stone-900 font-sans", null, [
