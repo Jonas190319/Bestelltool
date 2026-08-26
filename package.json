@@ -1,0 +1,8 @@
+{
+  "name": "bestelltool-forecast-v2",
+  "version": "2.0.0",
+  "private": true,
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}
