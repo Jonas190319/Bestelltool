@@ -71,6 +71,10 @@ a{color:inherit;}
 button{cursor:pointer;font:inherit;}
 input{font:inherit;}
 .accent-amber-700{accent-color:#b45309;}
+.nav-btn{border:1px solid #d6d3d1;background:#fff;color:#57534e;border-radius:.5rem;padding:.55rem .9rem;font-weight:600;}
+.nav-btn.active{background:#292524;color:#fff;border-color:#292524;}
+select{font:inherit;}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
 </style>
 </head>
 <body>
@@ -208,6 +212,71 @@ input{font:inherit;}
     if (isNaN(date.getTime())) return null;
     return date;
   }
+
+  function parseGermanNumber(v) {
+    if (v == null || v === "" || v === "*") return null;
+    if (typeof v === "number") return isFinite(v) ? v : null;
+    var s = String(v).trim().replace(/\./g, "").replace(",", ".").replace(/[^\d.+-]/g, "");
+    if (!s) return null;
+    var n = Number(s);
+    return isFinite(n) ? n : null;
+  }
+
+  function isoDate(d) {
+    if (!d) return null;
+    var y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,"0"), da = String(d.getDate()).padStart(2,"0");
+    return y + "-" + m + "-" + da;
+  }
+
+  function extractDailyFacts(aoa, parsed) {
+    var metricRow = aoa[3] || [];
+    var facts = [];
+    (parsed.leafRows || []).forEach(function (leaf) {
+      var row = aoa[leaf.rowIndex] || [];
+      (parsed.tagesBloecke || []).forEach(function (b) {
+        var values = {};
+        for (var k = 0; k < 5; k++) {
+          var lbl = String(metricRow[b.col + k] || "").trim().toLowerCase();
+          var key = METRIC_KEY_MAP[lbl];
+          if (key) values[key] = parseGermanNumber(row[b.col + k]);
+        }
+        var rawMenge = null;
+        for (var j = 0; j < 5; j++) {
+          if (String(metricRow[b.col + j] || "").trim().toLowerCase() === "menge") {
+            rawMenge = row[b.col + j];
+            break;
+          }
+        }
+        facts.push({
+          marktOriginal: leaf.markt,
+          owg: leaf.owg,
+          wg: leaf.wg,
+          artikel: leaf.artikel,
+          artikelnummer: leaf.artikelnummer,
+          gtin: leaf.gtin != null ? String(leaf.gtin) : "",
+          datum: isoDate(b.date),
+          kalenderwoche: b.woche != null ? String(b.woche) : "",
+          umsatz: values.umsatz == null ? null : values.umsatz,
+          umsatzVj: values.umsatzVj == null ? null : values.umsatzVj,
+          menge: values.menge == null ? null : values.menge,
+          mengeMaskiert: rawMenge === "*",
+          abschriften: values.abschriften == null ? null : values.abschriften,
+          abschriftenVj: values.abschriftenVj == null ? null : values.abschriftenVj
+        });
+      });
+    });
+    return facts;
+  }
+
+  function apiJson(url, options) {
+    return fetch(url, options).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        if (!res.ok) throw new Error(body.error || ("HTTP " + res.status));
+        return body;
+      });
+    });
+  }
+
   var METRIC_KEY_MAP = { "umsatz": "umsatz", "umsatz vj": "umsatzVj", "menge": "menge", "abschriften vk [br]": "abschriften", "abschriften vk [br] vj": "abschriftenVj" };
 
   // ==========================================================================
@@ -595,6 +664,16 @@ input{font:inherit;}
     var setPhase = phaseState[1];
     var inputRef = useRef(null);
 
+    // V2: Planungskontext + persistente Lernbasis
+    var viewState = useState("planung"); var view = viewState[0], setView = viewState[1];
+    var marketState = useState("NST"); var marketCode = marketState[0], setMarketCode = marketState[1];
+    var departmentState = useState("YBB"); var department = departmentState[0], setDepartment = departmentState[1];
+    var yearState = useState(new Date().getFullYear()); var targetYear = yearState[0], setTargetYear = yearState[1];
+    var weekState = useState(37); var targetWeek = weekState[0], setTargetWeek = weekState[1];
+    var factsState = useState([]); var dailyFacts = factsState[0], setDailyFacts = factsState[1];
+    var driveStateObj = useState({status:"unbekannt", message:""}); var driveState = driveStateObj[0], setDriveState = driveStateObj[1];
+    var saveState = useState(false); var savingDrive = saveState[0], setSavingDrive = saveState[1];
+
     var handleFile = useCallback(function (file) {
       setError(null); setReport(null); setCandidates(null); setFileName(file.name);
       var reader = new FileReader();
@@ -608,6 +687,7 @@ input{font:inherit;}
           var parsed = parseKreuztabelle(aoa);
           parsed.sheetName = sheetName;
           parsed.availableSheets = wb.SheetNames;
+          setDailyFacts(extractDailyFacts(aoa, parsed));
           setReport(parsed);
           setPhase(0);
           var built = buildClusters(parsed.leafRows);
@@ -636,6 +716,61 @@ input{font:inherit;}
       setCandidates(function (prev) { return prev.map(function (c) { return Object.assign({}, c, { accepted: accepted }); }); });
     }
 
+    function checkDrive() {
+      setDriveState({status:"prüft", message:"Drive-Verbindung wird geprüft…"});
+      apiJson("/api/drive?action=status").then(function (r) {
+        setDriveState({status:"ok", message:"Verbunden: " + r.rootFolderName});
+      }).catch(function (e) {
+        setDriveState({status:"fehler", message:e.message});
+      });
+    }
+
+    function saveLearningSnapshot() {
+      if (!report || !candidates) return;
+      setSavingDrive(true);
+      setDriveState({status:"prüft", message:"Lernbasis wird gespeichert…"});
+      var payload = {
+        action: "saveSapSnapshot",
+        market: marketCode,
+        department: department,
+        targetYear: Number(targetYear),
+        targetWeek: Number(targetWeek),
+        sourceFileName: fileName || "SAP-Upload.xlsx",
+        uploadedAt: new Date().toISOString(),
+        report: {
+          sheetName: report.sheetName,
+          years: report.years,
+          minDate: report.minDate ? report.minDate.toISOString() : null,
+          maxDate: report.maxDate ? report.maxDate.toISOString() : null,
+          weeks: report.wochenNummern,
+          marketsDetected: report.markets,
+          leafCount: report.leafCount,
+          maskedMengeCount: report.maskedMengeCount,
+          warnings: report.warnings
+        },
+        masterDecisions: candidates.map(function (c) {
+          return {
+            variants: c.variants,
+            conflictType: c.conflictType,
+            accepted: c.accepted,
+            targetProduct: c.editedName,
+            targetOWG: c.editedOwg,
+            targetWG: c.editedWg
+          };
+        }),
+        dailyFacts: dailyFacts
+      };
+      apiJson("/api/drive", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+      }).then(function (r) {
+        setDriveState({status:"ok", message:"Gespeichert: " + r.path});
+      }).catch(function (e) {
+        setDriveState({status:"fehler", message:e.message});
+      }).finally(function () { setSavingDrive(false); });
+    }
+
     var children = [];
 
     // Header
@@ -644,9 +779,64 @@ input{font:inherit;}
         cxEl("h1", "font-serif text-3xl font-bold tracking-tight text-stone-900", { key: "h1" }, ["Backwaren-Planung"]),
         cxEl("span", "font-mono text-xs text-stone-500 bg-white border border-stone-300 rounded px-2 py-0.5", { key: "badge" }, ["ELH · NST · OED"])
       ]),
-      cxEl("p", "text-stone-600 text-sm mt-1 max-w-2xl", { key: "sub" }, ["Phase 0 (Upload & Validierung) und Phase 1 (Bereinigung / Masterprodukte inkl. OWG/WG-Konsolidierung) — läuft vollständig im Browser, keine Datei verlässt diesen Rechner."]),
+      cxEl("p", "text-stone-600 text-sm mt-1 max-w-2xl", { key: "sub" }, ["V2 — Planungskontext, SAP-Import, Masterbereinigung und persistente Lernbasis in Google Drive. Forecast und Sortiment werden als nächste Phasen darauf aufgebaut."]),
       cxEl("div", "mt-4", { key: "dots" }, [h(StepDots, { active: phase })])
     ]));
+
+    children.push(cxEl("div", "flex gap-2 mb-5", {key:"nav"}, [
+      h("button", {className:"nav-btn " + (view === "planung" ? "active" : ""), onClick:function(){setView("planung");}}, "Planung"),
+      h("button", {className:"nav-btn " + (view === "daten" ? "active" : ""), onClick:function(){setView("daten");}}, "Daten & Stammdaten")
+    ]));
+
+    children.push(cxEl("div", "rounded-xl border border-stone-300 bg-white p-4 mb-6", {key:"context"}, [
+      cxEl("div", "font-serif text-xl font-bold mb-3", null, ["Planungskontext"]),
+      cxEl("div", "grid grid-cols-1 sm:grid-cols-4 gap-3", null, [
+        cxEl("label", "text-xs text-stone-500", null, ["Markt",
+          h("select", {value:marketCode, onChange:function(e){setMarketCode(e.target.value);}, className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"}, [
+            h("option",{value:"NST"},"NST"),
+            h("option",{value:"ELH"},"ELH"),
+            h("option",{value:"OED"},"OED"),
+            h("option",{value:"ANDERER"},"Anderer Markt")
+          ])
+        ]),
+        cxEl("label", "text-xs text-stone-500", null, ["Abteilung",
+          h("select", {value:department, onChange:function(e){setDepartment(e.target.value);}, className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"}, [
+            h("option",{value:"YBB"},"YBB — Bäckerei"),
+            h("option",{value:"YBA"},"YBA — Backoff")
+          ])
+        ]),
+        cxEl("label", "text-xs text-stone-500", null, ["Planjahr",
+          h("input", {type:"number", min:"2020", max:"2100", value:targetYear, onChange:function(e){setTargetYear(Number(e.target.value));}, className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"})
+        ]),
+        cxEl("label", "text-xs text-stone-500", null, ["Ziel-KW",
+          h("input", {type:"number", min:"1", max:"53", value:targetWeek, onChange:function(e){setTargetWeek(Number(e.target.value));}, className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"})
+        ])
+      ]),
+      cxEl("div", "mt-3 text-xs text-stone-500", null, ["Dieser Kontext gilt für Speicherung, spätere Sortimentsauswahl und Forecast. Der Daten-Cut für den Wochenforecast wird in der Forecast-Phase fest auf Mittwoch 23:59 Uhr gesetzt."])
+    ]));
+
+    if (view === "planung") {
+      children.push(cxEl("div", "grid grid-cols-1 sm:grid-cols-2 gap-4", {key:"planningHome"}, [
+        cxEl("div", "rounded-xl border border-stone-300 bg-white p-5", null, [
+          cxEl("div", "font-serif text-xl font-bold", null, ["Planwoche " + String(targetWeek).padStart(2,"0") + "/" + targetYear]),
+          cxEl("p", "text-sm text-stone-600 mt-2", null, ["Markt " + marketCode + " · " + department + ". In der nächsten Ausbaustufe werden hier Sortimentsauswahl, Forecast und Kapazitätssteuerung geladen."]),
+          cxEl("div", "mt-4 grid grid-cols-2 gap-2", null, [
+            cxEl("div", "rounded border border-stone-200 bg-stone-50 p-3 text-sm", null, ["1. Sortiment"]),
+            cxEl("div", "rounded border border-stone-200 bg-stone-50 p-3 text-sm", null, ["2. Forecast"]),
+            cxEl("div", "rounded border border-stone-200 bg-stone-50 p-3 text-sm", null, ["3. Produktionsplan"]),
+            cxEl("div", "rounded border border-stone-200 bg-stone-50 p-3 text-sm", null, ["4. Bestellung"])
+          ])
+        ]),
+        cxEl("div", "rounded-xl border border-stone-300 bg-white p-5", null, [
+          cxEl("div", "font-serif text-xl font-bold", null, ["Google-Drive Lernbasis"]),
+          cxEl("p", "text-sm text-stone-600 mt-2", null, ["Die App speichert bereinigte Wochen-Snapshots serverseitig in Forecast-App / Markt / Abteilung / SAP / Jahr / Plan_KW."]),
+          cxEl("button", "mt-4 text-xs font-semibold px-3 py-2 rounded border border-stone-300 bg-white", {onClick:checkDrive}, ["Drive-Verbindung prüfen"]),
+          driveState.message ? cxEl("div", "mt-3 text-xs " + (driveState.status==="fehler" ? "text-red-800" : driveState.status==="ok" ? "text-emerald-700" : "text-stone-500"), null, [driveState.message]) : null
+        ])
+      ]));
+    }
+
+    if (view === "daten") {
 
     // Upload
     children.push(cxEl("div", "rounded-xl border-2 border-dashed p-8 text-center transition-colors " + (dragOver ? "border-amber-600 bg-amber-50" : "border-stone-300 bg-white"), {
@@ -748,8 +938,27 @@ input{font:inherit;}
       ]));
     }
 
+    if (report && candidates) {
+      children.push(cxEl("div", "mt-6 rounded-xl border border-stone-300 bg-white p-4", {key:"driveSave"}, [
+        cxEl("div", "font-serif text-xl font-bold", null, ["Lernbasis speichern"]),
+        cxEl("p", "text-sm text-stone-600 mt-1", null, [
+          "Speichert den bereinigten SAP-Snapshot für ", h("strong",null,marketCode + " · " + department + " · Plan KW " + targetWeek + "/" + targetYear),
+          " in Google Drive. Bereits vorhandene Wochen werden nicht als zusätzliche Forecast-Gewichte gezählt; die Historie wird später nach Datum/KW ausgewertet."
+        ]),
+        cxEl("div", "mt-3 flex gap-2 items-center flex-wrap", null, [
+          cxEl("button", "bg-amber-700 text-amber-50 font-semibold px-4 py-2.5 rounded-lg text-sm", {
+            disabled:savingDrive, onClick:saveLearningSnapshot
+          }, [savingDrive ? "Speichert…" : "In Google Drive als Lernbasis speichern"]),
+          cxEl("button", "text-xs font-semibold px-3 py-2 rounded border border-stone-300 bg-white", {onClick:checkDrive}, ["Drive prüfen"])
+        ]),
+        driveState.message ? cxEl("div", "mt-3 text-xs " + (driveState.status==="fehler" ? "text-red-800" : driveState.status==="ok" ? "text-emerald-700" : "text-stone-500"), null, [driveState.message]) : null
+      ]));
+    }
+
+    } // Ende Daten & Stammdaten
+
     children.push(cxEl("div", "mt-12 pt-4 border-t border-stone-300 text-xs text-stone-400", { key: "footer" }, [
-      "Nächste Phasen (2–8: Mengenschätzung, Tagesbasis, Forecast, Portfolio, Produktionsplan, Bestellung, Export) folgen als eigene Ausbaustufen, sobald Phase 0+1 an echten Daten für ELH/NST/OED bestätigt sind."
+      "V2 Basis: Planungskontext + SAP-Import + Masterbereinigung + Google-Drive-Lernbasis. Nächster Schritt: Sortimentsauswahl je Markt/Abteilung/KW und danach Forecast."
     ]));
 
     return cxEl("div", "min-h-screen bg-stone-100 text-stone-900 font-sans", null, [
