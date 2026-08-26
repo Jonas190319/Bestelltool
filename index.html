@@ -357,6 +357,86 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
     });
   }
 
+  function approxJsonBytes(value) {
+    try { return new Blob([JSON.stringify(value)]).size; }
+    catch (e) { return JSON.stringify(value).length * 2; }
+  }
+
+  function chunkByBytes(rows, maxBytes, maxItems) {
+    var chunks = [], current = [], currentBytes = 2;
+    (rows || []).forEach(function (row) {
+      var rowBytes = approxJsonBytes(row) + 2;
+      if (current.length && (currentBytes + rowBytes > maxBytes || current.length >= maxItems)) {
+        chunks.push(current);
+        current = [];
+        currentBytes = 2;
+      }
+      current.push(row);
+      currentBytes += rowBytes;
+    });
+    if (current.length) chunks.push(current);
+    return chunks;
+  }
+
+  function stableFactKey(f) {
+    var articleKey = f.artikelnummer ? ("A:" + String(f.artikelnummer))
+      : f.gtin ? ("G:" + String(f.gtin))
+      : ("N:" + transliterate(f.artikel || ""));
+    return [String(f.department || ""), String(f.datum || ""), articleKey].join("|");
+  }
+
+  function normalizeFactsForSnapshot(facts) {
+    var map = new Map();
+    var exactDuplicates = 0;
+    var conflictingDuplicates = 0;
+
+    (facts || []).forEach(function (fact) {
+      var f = Object.assign({}, fact);
+      var key = stableFactKey(f);
+      f.factKey = key;
+
+      if (!map.has(key)) {
+        map.set(key, f);
+        return;
+      }
+
+      var prev = map.get(key);
+      var prevComparable = JSON.stringify({
+        umsatz:prev.umsatz, umsatzVj:prev.umsatzVj, menge:prev.menge,
+        abschriften:prev.abschriften, abschriftenVj:prev.abschriftenVj
+      });
+      var nextComparable = JSON.stringify({
+        umsatz:f.umsatz, umsatzVj:f.umsatzVj, menge:f.menge,
+        abschriften:f.abschriften, abschriftenVj:f.abschriftenVj
+      });
+
+      if (prevComparable === nextComparable) {
+        exactDuplicates++;
+        return;
+      }
+
+      conflictingDuplicates++;
+      function score(x) {
+        return ["umsatz","umsatzVj","menge","abschriften","abschriftenVj"].reduce(function (n,k) {
+          return n + (x[k] == null ? 0 : 1);
+        }, 0);
+      }
+      if (score(f) >= score(prev)) map.set(key, f);
+    });
+
+    var rows = Array.from(map.values()).sort(function (a,b) {
+      var d = String(a.datum || "").localeCompare(String(b.datum || ""));
+      if (d) return d;
+      return stableFactKey(a).localeCompare(stableFactKey(b), "de");
+    });
+
+    return {
+      rows: rows,
+      removedExactDuplicates: exactDuplicates,
+      conflictingDuplicates: conflictingDuplicates
+    };
+  }
+
   var METRIC_KEY_MAP = { "umsatz": "umsatz", "umsatz vj": "umsatzVj", "menge": "menge", "abschriften vk [br]": "abschriften", "abschriften vk [br] vj": "abschriftenVj" };
 
   // ==========================================================================
@@ -817,7 +897,11 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
       apiJson("/api/drive?action=masterdata&market=" + encodeURIComponent(marketCode) + "&department=" + encodeURIComponent(d)).then(function(r){
         var merged = mergeMasterRows(baseRows || rawMasterRows, r.records || [], d);
         setMasterRows(merged);
-        setMasterStatus({status:"ok", message:(r.records || []).length + " gespeicherte Stammdatensätze geladen. " + merged.length + " Produkte aktuell verfügbar."});
+        if (!merged.length) {
+          setMasterStatus({status:"ok", message:"Noch keine Stammdaten für " + marketCode + " · " + d + " vorhanden. Bitte zuerst im Reiter Daten-Upload einen SAP-Auszug laden; danach erscheinen die Produkte hier zur Bearbeitung."});
+        } else {
+          setMasterStatus({status:"ok", message:(r.records || []).length + " gespeicherte Stammdatensätze geladen. " + merged.length + " Produkte aktuell verfügbar."});
+        }
       }).catch(function(e){
         setMasterRows((baseRows || rawMasterRows).filter(function(r){return r.department === d;}));
         setMasterStatus({status:"fehler", message:e.message});
@@ -837,16 +921,51 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
       });});
     }
 
-    function saveMasterData() {
+    async function saveMasterData() {
       setMasterSaving(true);
-      setMasterStatus({status:"lädt", message:"Stammdaten werden in Google Drive gespeichert…"});
-      apiJson("/api/drive", {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({action:"saveMasterData", market:marketCode, department:department, records:masterRows, savedAt:new Date().toISOString()})
-      }).then(function(r){
+      try {
+        if (!masterRows.length) {
+          setMasterStatus({status:"fehler", message:"Keine Stammdaten vorhanden. Bitte zuerst einen SAP-Auszug im Reiter Daten-Upload laden oder vorhandene Stammdaten über „Neu laden“ abrufen."});
+          return;
+        }
+
+        var chunks = chunkByBytes(masterRows, 120 * 1024, 75);
+        var uploadId = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8);
+        var base = {market:marketCode, department:department, uploadId:uploadId};
+
+        setMasterStatus({status:"lädt", message:"Stammdaten-Speicherung wird vorbereitet…"});
+        await apiJson("/api/drive", {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify(Object.assign({}, base, {
+            action:"saveMasterDataInit",
+            totalRecords:masterRows.length,
+            totalChunks:chunks.length,
+            savedAt:new Date().toISOString()
+          }))
+        });
+
+        for (var i=0; i<chunks.length; i++) {
+          setMasterStatus({status:"lädt", message:"Stammdaten: Block " + (i+1) + " von " + chunks.length + " wird gespeichert…"});
+          await apiJson("/api/drive", {
+            method:"POST", headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(Object.assign({}, base, {
+              action:"saveMasterDataChunk",
+              chunkIndex:i+1,
+              records:chunks[i]
+            }))
+          });
+        }
+
+        var r = await apiJson("/api/drive", {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify(Object.assign({}, base, {action:"saveMasterDataFinalize"}))
+        });
         setMasterStatus({status:"ok", message:"Gespeichert: " + r.path + " (" + r.records + " Produkte)"});
-      }).catch(function(e){setMasterStatus({status:"fehler", message:e.message});})
-      .finally(function(){setMasterSaving(false);});
+      } catch(e) {
+        setMasterStatus({status:"fehler", message:e.message});
+      } finally {
+        setMasterSaving(false);
+      }
     }
 
     function checkDrive() {
@@ -863,17 +982,32 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
 
       setSavingDrive(true);
       try {
-        var mappedFacts = applyMasterMappingsToFacts(dailyFacts, masterRows, department);
-        var CHUNK_SIZE = 300;
-        var totalChunks = Math.max(1, Math.ceil(mappedFacts.length / CHUNK_SIZE));
+        var mapped = applyMasterMappingsToFacts(dailyFacts, masterRows, department);
+        var normalized = normalizeFactsForSnapshot(mapped);
+        var mappedFacts = normalized.rows;
+
+        var factChunks = chunkByBytes(mappedFacts, 120 * 1024, 75);
+        var decisions = candidates.map(function (c) {
+          return {
+            variants: c.variants,
+            conflictType: c.conflictType,
+            accepted: c.accepted,
+            targetProduct: c.editedName,
+            targetOWG: c.editedOwg,
+            targetWG: c.editedWg
+          };
+        });
+        var decisionChunks = chunkByBytes(decisions, 80 * 1024, 20);
         var uploadId = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+        var snapshotKey = [marketCode, department, Number(targetYear), "KW" + String(Number(targetWeek)).padStart(2,"0")].join("|");
 
         var base = {
           market: marketCode,
           department: department,
           targetYear: Number(targetYear),
           targetWeek: Number(targetWeek),
-          uploadId: uploadId
+          uploadId: uploadId,
+          snapshotKey: snapshotKey
         };
 
         setDriveState({status:"prüft", message:"Speicherung wird vorbereitet…"});
@@ -885,7 +1019,12 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
             sourceFileName: fileName || "SAP-Upload.xlsx",
             uploadedAt: new Date().toISOString(),
             totalRows: mappedFacts.length,
-            totalChunks: totalChunks,
+            totalFactChunks: factChunks.length,
+            totalDecisionChunks: decisionChunks.length,
+            dedupe: {
+              removedExactDuplicates: normalized.removedExactDuplicates,
+              conflictingDuplicates: normalized.conflictingDuplicates
+            },
             report: {
               sheetName: report.sheetName,
               years: report.years,
@@ -897,27 +1036,29 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
               maskedMengeCount: report.maskedMengeCount,
               warnings: report.warnings
             },
-            masterDecisions: candidates.map(function (c) {
-              return {
-                variants: c.variants,
-                conflictType: c.conflictType,
-                accepted: c.accepted,
-                targetProduct: c.editedName,
-                targetOWG: c.editedOwg,
-                targetWG: c.editedWg
-              };
-            }),
             masterDataVersion: 3
           }))
         });
 
-        for (var i = 0; i < totalChunks; i++) {
-          var start = i * CHUNK_SIZE;
-          var chunk = mappedFacts.slice(start, start + CHUNK_SIZE);
-          var done = Math.min(start + chunk.length, mappedFacts.length);
+        for (var d = 0; d < decisionChunks.length; d++) {
+          setDriveState({status:"prüft", message:"Produktentscheidungen werden gespeichert… (" + (d+1) + "/" + decisionChunks.length + ")"});
+          await apiJson("/api/drive", {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(Object.assign({}, base, {
+              action:"saveSapDecisionChunk",
+              chunkIndex:d+1,
+              decisions:decisionChunks[d]
+            }))
+          });
+        }
+
+        var savedRows = 0;
+        for (var i = 0; i < factChunks.length; i++) {
+          savedRows += factChunks[i].length;
           setDriveState({
             status:"prüft",
-            message:"Speichere " + done + " von " + mappedFacts.length + " Datensätzen… (" + (i + 1) + "/" + totalChunks + ")"
+            message:"Speichere " + savedRows + " von " + mappedFacts.length + " Datensätzen… (" + (i + 1) + "/" + factChunks.length + ")"
           });
 
           await apiJson("/api/drive", {
@@ -926,23 +1067,24 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
             body: JSON.stringify(Object.assign({}, base, {
               action: "saveSapSnapshotChunk",
               chunkIndex: i + 1,
-              rows: chunk
+              rows: factChunks[i]
             }))
           });
         }
 
-        setDriveState({status:"prüft", message:"Speicherung wird abgeschlossen…"});
+        setDriveState({status:"prüft", message:"Speicherung wird abgeschlossen und geprüft…"});
         var result = await apiJson("/api/drive", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
-          body: JSON.stringify(Object.assign({}, base, {
-            action: "saveSapSnapshotFinalize"
-          }))
+          body: JSON.stringify(Object.assign({}, base, {action: "saveSapSnapshotFinalize"}))
         });
 
+        var extra = normalized.removedExactDuplicates
+          ? (" · " + normalized.removedExactDuplicates + " exakte Dubletten entfernt")
+          : "";
         setDriveState({
           status:"ok",
-          message:"Erfolgreich gespeichert: " + result.path + " (" + mappedFacts.length + " Datensätze)"
+          message:"Erfolgreich gespeichert: " + result.path + " · " + mappedFacts.length + " Datensätze" + extra + ". Derselbe Markt/Abteilung/Jahr/KW-Schlüssel wird bei erneutem Upload ersetzt, nicht doppelt gezählt."
         });
       } catch (e) {
         setDriveState({status:"fehler", message:e.message});
@@ -959,7 +1101,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation M
         cxEl("h1", "font-serif text-3xl font-bold tracking-tight text-stone-900", { key: "h1" }, ["Backwaren-Planung"]),
         cxEl("span", "font-mono text-xs text-stone-500 bg-white border border-stone-300 rounded px-2 py-0.5", { key: "badge" }, ["ELH · NST · OED"])
       ]),
-      cxEl("p", "text-stone-600 text-sm mt-1 max-w-2xl", { key: "sub" }, ["V3.1 — Planungskontext, SAP-Import, persistente Lernbasis mit blockweiser Speicherung und bearbeitbare Stammdaten in Google Drive. Forecast und Sortiment werden als nächste Phasen darauf aufgebaut."]),
+      cxEl("p", "text-stone-600 text-sm mt-1 max-w-2xl", { key: "sub" }, ["V3.2 — Planungskontext, SAP-Import, persistente Lernbasis mit blockweiser Speicherung und bearbeitbare Stammdaten in Google Drive. Forecast und Sortiment werden als nächste Phasen darauf aufgebaut."]),
       cxEl("div", "mt-4", { key: "dots" }, [h(StepDots, { active: phase })])
     ]));
 

@@ -36,3 +36,14 @@ Drive-Struktur je Planwoche:
 Der Nutzer klickt weiterhin nur einmal auf **In Google Drive als Lernbasis speichern**.
 Die Oberfläche zeigt dabei den Fortschritt `Speichere X von Y Datensätzen`.
 Erst wenn alle Datenblöcke vorhanden sind, wird das Manifest auf `status: complete` gesetzt.
+
+
+## V3.2 – Robuste Speicherung + Dublettenschutz
+
+- SAP-Daten, Produktentscheidungen und Stammdaten werden in sehr kleinen Requests übertragen.
+- Eindeutiger Lernschlüssel: `MARKT | ABTEILUNG | JAHR | KW`.
+- Beispiel `NST | YBB | 2026 | KW34`: fünf Uploads bleiben **eine** Lernwoche; der neueste Upload ersetzt die vorige Version.
+- `NST | YBB | 2026 | KW34` und `NST | YBA | 2026 | KW34` bleiben getrennt.
+- Tagesdaten werden nach Datum und Artikel sortiert.
+- Exakt identische Artikel-/Datum-Dubletten werden vor dem Speichern entfernt.
+- Jeder komplette Wochen-Snapshot erhält `forecastWeight = 1`.
