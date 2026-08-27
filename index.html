@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Backwaren-Planung — ELH · NST · OED</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;}
+body{margin:0;}
+.font-sans{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
+.font-serif{font-family:Georgia,Cambria,"Times New Roman",Times,serif;}
+.font-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
+.min-h-screen{min-height:100vh;}
+.max-w-5xl{max-width:64rem;}
+.max-w-2xl{max-width:42rem;}
+.mx-auto{margin-left:auto;margin-right:auto;}
+.flex{display:flex;}
+.grid{display:grid;}
+.hidden{display:none;}
+.flex-wrap{flex-wrap:wrap;}
+.flex-1{flex:1 1 0%;}
+.items-baseline{align-items:baseline;}
+.items-center{align-items:center;}
+.items-start{align-items:flex-start;}
+.justify-between{justify-content:space-between;}
+.justify-center{justify-content:center;}
+.self-center{align-self:center;}
+.min-w-0{min-width:0px;}
+.shrink-0{flex-shrink:0;}
+.ml-auto{margin-left:auto;}
+.w-full{width:100%;}
+.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr));}
+.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+@media (min-width:640px){
+  .sm-grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .sm-grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .sm-grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr));}
+}
+.border{border-width:1px;border-style:solid;border-color:#e5e7eb;}
+.border-2{border-width:2px;border-style:solid;}
+.border-t{border-top-width:1px;border-top-style:solid;}
+.border-b{border-bottom-width:1px;border-bottom-style:solid;}
+.border-dashed{border-style:dashed;}
+.rounded{border-radius:0.25rem;}
+.rounded-lg{border-radius:0.5rem;}
+.rounded-xl{border-radius:0.75rem;}
+.rounded-full{border-radius:9999px;}
+.underline{text-decoration-line:underline;}
+.uppercase{text-transform:uppercase;}
+.text-center{text-align:center;}
+.tracking-tight{letter-spacing:-0.025em;}
+.tracking-wide{letter-spacing:0.025em;}
+.overflow-y-auto{overflow-y:auto;}
+.max-h-28{max-height:7rem;}
+.font-bold{font-weight:700;}
+.font-semibold{font-weight:600;}
+.font-medium{font-weight:500;}
+.text-3xl{font-size:1.875rem;line-height:2.25rem;}
+.text-xl{font-size:1.25rem;line-height:1.75rem;}
+.text-sm{font-size:0.875rem;line-height:1.25rem;}
+.text-xs{font-size:0.75rem;line-height:1rem;}
+.text-tiny{font-size:11px;line-height:1rem;}
+.h-4{height:1rem;}
+.w-4{width:1rem;}
+.opacity-60{opacity:0.6;}
+.opacity-70{opacity:0.7;}
+a{color:inherit;}
+button{cursor:pointer;font:inherit;}
+input{font:inherit;}
+.accent-amber-700{accent-color:#b45309;}
+.nav-btn{border:1px solid #d6d3d1;background:#fff;color:#57534e;border-radius:.5rem;padding:.55rem .9rem;font-weight:600;}
+.nav-btn.active{background:#292524;color:#fff;border-color:#292524;}
+select{font:inherit;}
+table{border-collapse:collapse;}
+.master-table th,.master-table td{border-bottom:1px solid #e7e5e4;padding:.5rem;vertical-align:top;}
+.master-table th{position:sticky;top:0;background:#f5f5f4;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#57534e;z-index:1;}
+.master-table input{width:100%;min-width:180px;border:1px solid #d6d3d1;border-radius:.35rem;padding:.35rem .45rem;}
+.master-table .small-input{min-width:220px;}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
+</style>
+</head>
+<body>
+<div id="root">
+  <div style="max-width:640px;margin:60px auto;padding:20px;font-family:sans-serif;color:#57534e;">Lädt…</div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ==========================================================================
+  // Hilfsfunktion: kurze Notation statt JSX (kein Babel/Transform zur Laufzeit
+  // nötig — läuft als ganz normales, unauffälliges JavaScript in jedem Browser)
+  // ==========================================================================
+  var h = React.createElement;
+  var useState = React.useState;
+  var useCallback = React.useCallback;
+  var useMemo = React.useMemo;
+  var useRef = React.useRef;
+
+  // Utility-Klassen inline erzeugen (Ersatz für Tailwind, ohne externe Abhängigkeit)
+  var SP = {"0.5":"0.125rem","1":"0.25rem","1.5":"0.375rem","2":"0.5rem","2.5":"0.625rem","3":"0.75rem","4":"1rem","6":"1.5rem","8":"2rem","10":"2.5rem","12":"3rem","28":"7rem"};
+  var STONE = {50:"#fafaf9",100:"#f5f5f4",200:"#e7e5e4",300:"#d6d3d1",400:"#a8a29e",500:"#78716c",600:"#57534e",700:"#44403c",800:"#292524",900:"#1c1917"};
+  var AMBER = {50:"#fffbeb",200:"#fde68a",400:"#fbbf24",600:"#d97706",700:"#b45309",800:"#92400e",900:"#78350f"};
+  var EMERALD = {50:"#ecfdf5",300:"#6ee7b7",700:"#047857",800:"#065f46",900:"#064e3b"};
+  var RED = {50:"#fef2f2",200:"#fecaca",300:"#fca5a5",800:"#991b1b",900:"#7f1d1d"};
+
+  function styleFromClass(tokens) {
+    var s = {};
+    tokens.forEach(function (t) {
+      var hover = false, disabled = false;
+      if (t.indexOf("hover:") === 0) { hover = true; t = t.slice(6); }
+      if (t.indexOf("disabled:") === 0) { disabled = true; t = t.slice(9); }
+      if (hover || disabled) return; // Hover-/Disabled-Varianten werden unten separat per CSS-Klasse gehandhabt
+      var m;
+      if ((m = t.match(/^bg-(stone|amber|emerald|red)-(\d+)$/))) { s.backgroundColor = ({stone:STONE,amber:AMBER,emerald:EMERALD,red:RED})[m[1]][m[2]]; return; }
+      if (t === "bg-white") { s.backgroundColor = "#ffffff"; return; }
+      if ((m = t.match(/^text-(stone|amber|emerald|red)-(\d+)$/))) { s.color = ({stone:STONE,amber:AMBER,emerald:EMERALD,red:RED})[m[1]][m[2]]; return; }
+      if ((m = t.match(/^border-(stone|amber|emerald|red)-(\d+)$/))) { s.borderColor = ({stone:STONE,amber:AMBER,emerald:EMERALD,red:RED})[m[1]][m[2]]; return; }
+      if ((m = t.match(/^(p|px|py|pt|pb|m|mx|mt|mb|ml|gap)-([\d.]+)$/))) {
+        var v = SP[m[2]] || (parseFloat(m[2]) * 0.25 + "rem");
+        var prop = m[1];
+        if (prop === "p") s.padding = v;
+        else if (prop === "px") { s.paddingLeft = v; s.paddingRight = v; }
+        else if (prop === "py") { s.paddingTop = v; s.paddingBottom = v; }
+        else if (prop === "pt") s.paddingTop = v;
+        else if (prop === "pb") s.paddingBottom = v;
+        else if (prop === "m") s.margin = v;
+        else if (prop === "mx") { s.marginLeft = v; s.marginRight = v; }
+        else if (prop === "mt") s.marginTop = v;
+        else if (prop === "mb") s.marginBottom = v;
+        else if (prop === "ml") s.marginLeft = v;
+        else if (prop === "gap") s.gap = v;
+        return;
+      }
+    });
+    return s;
+  }
+
+  // className bleibt als Klassenliste erhalten (für die generischen Layout-Klassen
+  // aus dem <style>-Block), plus inline berechnete Farb-/Abstandswerte obendrauf.
+  function cx(str) {
+    var tokens = String(str || "").split(/\s+/).filter(Boolean);
+    var cls = tokens.filter(function (t) {
+      return !/^(bg|text|border)-(stone|amber|emerald|red)-\d+$/.test(t) &&
+             !/^(p|px|py|pt|pb|m|mx|mt|mb|ml|gap)-[\d.]+$/.test(t) &&
+             t !== "bg-white";
+    }).map(function (t) {
+      if (t.indexOf("sm:") === 0) return "sm-" + t.slice(3);
+      if (t === "text-[11px]") return "text-tiny";
+      return t;
+    }).join(" ");
+    return { className: cls, style: styleFromClass(tokens) };
+  }
+
+  // ==========================================================================
+  // Kleine Inline-Icons
+  // ==========================================================================
+  function Icon(p) {
+    return h("svg", { width: p.size || 16, height: p.size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: p.className || "" },
+      h("path", { d: p.path }));
+  }
+  function IconUpload(p) { return h(Icon, Object.assign({}, p, { path: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" })); }
+  function IconCheck(p) { return h(Icon, Object.assign({}, p, { path: "M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3" })); }
+  function IconAlert(p) { return h(Icon, Object.assign({}, p, { path: "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" })); }
+  function IconChevronDown(p) { return h(Icon, Object.assign({}, p, { path: "M6 9l6 6 6-6" })); }
+  function IconChevronRight(p) { return h(Icon, Object.assign({}, p, { path: "M9 18l6-6-6-6" })); }
+  function IconDownload(p) { return h(Icon, Object.assign({}, p, { path: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" })); }
+  function IconReset(p) { return h(Icon, Object.assign({}, p, { path: "M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8M3 3v5h5" })); }
+  function IconInfo(p) { return h(Icon, Object.assign({}, p, { path: "M12 16v-4M12 8h.01M22 12a10 10 0 11-20 0 10 10 0 0120 0z" })); }
+  function IconSheet(p) { return h(Icon, Object.assign({}, p, { path: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h6M9 17h6" })); }
+
+  // ==========================================================================
+  // Hilfsfunktionen: Normalisierung & Fuzzy-Matching
+  // ==========================================================================
+  function transliterate(s) {
+    return String(s || "").toUpperCase()
+      .replace(/Ä/g, "AE").replace(/Ö/g, "OE").replace(/Ü/g, "UE").replace(/ß/g, "SS")
+      .replace(/[.,\-_/]/g, " ").replace(/\s+/g, " ").trim();
+  }
+  function levenshtein(a, b) {
+    var m = a.length, n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    var dp = new Array(n + 1);
+    for (var j = 0; j <= n; j++) dp[j] = j;
+    for (var i = 1; i <= m; i++) {
+      var prev = dp[0];
+      dp[0] = i;
+      for (j = 1; j <= n; j++) {
+        var tmp = dp[j];
+        dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+        prev = tmp;
+      }
+    }
+    return dp[n];
+  }
+  function similarity(a, b) {
+    var maxLen = Math.max(a.length, b.length);
+    if (maxLen === 0) return 1;
+    return 1 - levenshtein(a, b) / maxLen;
+  }
+  function extractTrailingQuantity(name) {
+    var m = String(name).trim().match(/(\d+(?:[.,]\d+)?)\s*(KG|G|ML|L)$/);
+    if (!m) return null;
+    return { value: parseFloat(m[1].replace(",", ".")), unit: m[2] };
+  }
+  function parseGermanDate(str) {
+    if (!str || typeof str !== "string") return null;
+    var m = str.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (!m) return null;
+    var d = m[1], mo = m[2], y = m[3];
+    var date = new Date(Number(y), Number(mo) - 1, Number(d));
+    if (isNaN(date.getTime())) return null;
+    return date;
+  }
+
+  function parseGermanNumber(v) {
+    if (v == null || v === "" || v === "*") return null;
+    if (typeof v === "number") return isFinite(v) ? v : null;
+    var s = String(v).trim().replace(/\./g, "").replace(",", ".").replace(/[^\d.+-]/g, "");
+    if (!s) return null;
+    var n = Number(s);
+    return isFinite(n) ? n : null;
+  }
+
+  function isoDate(d) {
+    if (!d) return null;
+    var y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,"0"), da = String(d.getDate()).padStart(2,"0");
+    return y + "-" + m + "-" + da;
+  }
+
+  function extractDailyFacts(aoa, parsed) {
+    var metricRow = aoa[3] || [];
+    var facts = [];
+    (parsed.leafRows || []).forEach(function (leaf) {
+      var row = aoa[leaf.rowIndex] || [];
+      (parsed.tagesBloecke || []).forEach(function (b) {
+        var values = {};
+        for (var k = 0; k < 5; k++) {
+          var lbl = String(metricRow[b.col + k] || "").trim().toLowerCase();
+          var key = METRIC_KEY_MAP[lbl];
+          if (key) values[key] = parseGermanNumber(row[b.col + k]);
+        }
+        var rawMenge = null;
+        for (var j = 0; j < 5; j++) {
+          if (String(metricRow[b.col + j] || "").trim().toLowerCase() === "menge") {
+            rawMenge = row[b.col + j];
+            break;
+          }
+        }
+        facts.push({
+          marktOriginal: leaf.markt,
+          department: inferDepartmentFromOwg(leaf.owg),
+          owg: leaf.owg,
+          wg: leaf.wg,
+          artikel: leaf.artikel,
+          artikelnummer: leaf.artikelnummer,
+          gtin: leaf.gtin != null ? String(leaf.gtin) : "",
+          datum: isoDate(b.date),
+          kalenderwoche: b.woche != null ? String(b.woche) : "",
+          umsatz: values.umsatz == null ? null : values.umsatz,
+          umsatzVj: values.umsatzVj == null ? null : values.umsatzVj,
+          menge: values.menge == null ? null : values.menge,
+          mengeMaskiert: rawMenge === "*",
+          abschriften: values.abschriften == null ? null : values.abschriften,
+          abschriftenVj: values.abschriftenVj == null ? null : values.abschriftenVj
+        });
+      });
+    });
+    return facts;
+  }
+
+
+  function inferDepartmentFromOwg(owg) {
+    var s = transliterate(owg || "");
+    return (s.indexOf("BAKE OFF") >= 0 || s.indexOf("TK BAKE OFF") >= 0) ? "YBA" : "YBB";
+  }
+
+  function masterKey(r) {
+    if (r.artikelnummer) return "A:" + String(r.artikelnummer);
+    if (r.gtin) return "G:" + String(r.gtin);
+    return "N:" + transliterate(r.artikel || r.sourceName || r.masterName || "");
+  }
+
+  function buildMasterRows(leafRows) {
+    var map = new Map();
+    (leafRows || []).forEach(function (r) {
+      var dept = inferDepartmentFromOwg(r.owg);
+      var key = masterKey(r);
+      if (!map.has(key)) {
+        map.set(key, {
+          key:key,
+          department:dept,
+          artikelnummer:r.artikelnummer || "",
+          gtin:r.gtin != null ? String(r.gtin) : "",
+          sourceName:r.artikel || "",
+          sourceOwg:r.owg || "",
+          sourceWg:r.wg || "",
+          masterName:r.artikel || "",
+          targetOwg:r.owg || "",
+          targetWg:r.wg || "",
+          active:true,
+          updatedAt:null
+        });
+      }
+    });
+    return Array.from(map.values()).sort(function(a,b){
+      return (a.targetOwg + "|" + a.targetWg + "|" + a.masterName).localeCompare(b.targetOwg + "|" + b.targetWg + "|" + b.masterName, "de");
+    });
+  }
+
+  function mergeMasterRows(baseRows, savedRows, department) {
+    var out = new Map();
+    (baseRows || []).filter(function(r){return r.department === department;}).forEach(function(r){out.set(r.key, Object.assign({}, r));});
+    (savedRows || []).filter(function(r){return !r.department || r.department === department;}).forEach(function(s){
+      var k = s.key || masterKey(s);
+      var cur = out.get(k) || {
+        key:k, department:department, artikelnummer:s.artikelnummer||"", gtin:s.gtin||"",
+        sourceName:s.sourceName||s.masterName||"", sourceOwg:s.sourceOwg||s.targetOwg||"", sourceWg:s.sourceWg||s.targetWg||""
+      };
+      out.set(k, Object.assign({}, cur, s, {key:k, department:department}));
+    });
+    return Array.from(out.values()).sort(function(a,b){
+      return (a.targetOwg + "|" + a.targetWg + "|" + a.masterName).localeCompare(b.targetOwg + "|" + b.targetWg + "|" + b.masterName, "de");
+    });
+  }
+
+  function applyMasterMappingsToFacts(facts, rows, department) {
+    var map = new Map();
+    (rows || []).forEach(function(r){ map.set(r.key || masterKey(r), r); });
+    return (facts || []).filter(function(f){ return (f.department || inferDepartmentFromOwg(f.owg)) === department; }).map(function(f){
+      var r = map.get(masterKey(f));
+      if (!r) return Object.assign({}, f, {department:department});
+      return Object.assign({}, f, {
+        department:department,
+        artikelOriginal:f.artikel,
+        owgOriginal:f.owg,
+        wgOriginal:f.wg,
+        artikel:r.masterName || f.artikel,
+        owg:r.targetOwg || f.owg,
+        wg:r.targetWg || f.wg,
+        masterMapped:true
+      });
+    });
+  }
+
+  function apiJson(url, options) {
+    return fetch(url, options).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        if (!res.ok) throw new Error(body.error || ("HTTP " + res.status));
+        return body;
+      });
+    });
+  }
+
+  var METRIC_KEY_MAP = { "umsatz": "umsatz", "umsatz vj": "umsatzVj", "menge": "menge", "abschriften vk [br]": "abschriften", "abschriften vk [br] vj": "abschriftenVj" };
+
+  // ==========================================================================
+  // Kern: Kreuztabelle parsen
+  // ==========================================================================
+  function parseKreuztabelle(aoa) {
+    var warnings = [];
+    if (!aoa || aoa.length < 5) throw new Error("Datei enthält weniger als 5 Zeilen — keine gültige Kreuztabelle.");
+    var rowMonat = aoa[0] || [], rowWoche = aoa[1] || [], rowTag = aoa[2] || [], rowMetric = aoa[3] || [];
+
+    function findCol(label) {
+      for (var i = 0; i < rowMetric.length; i++) {
+        if (String(rowMetric[i] || "").trim().toLowerCase() === label) return i;
+      }
+      return -1;
+    }
+    var colMarkt = findCol("markt"), colOwg = findCol("oberwarengrp."), colWg = findCol("warengr.");
+    var colArtikelNr = findCol("artikel"), colGtin = findCol("gtin");
+    var colArtikelName = colArtikelNr + 1;
+
+    if (colMarkt < 0 || colOwg < 0 || colWg < 0 || colArtikelNr < 0) {
+      throw new Error("Erwartete Spalten (Markt / Oberwarengrp. / Warengr. / Artikel) wurden in Zeile 4 nicht gefunden. Ist das wirklich das Blatt 'Kreuztabelle' aus dem SAP-Umsatzbericht?");
+    }
+    if (colGtin >= 0 && colArtikelName !== colGtin) {
+      warnings.push("Die Spalte mit dem Artikelnamen liegt nicht direkt vor 'GTIN' wie im bekannten Exportformat erwartet — Artikelnamen könnten falsch zugeordnet sein, bitte Stichprobe prüfen.");
+    }
+
+    var firstBlockCol = Math.max(colGtin >= 0 ? colGtin : colArtikelName, colArtikelName) + 1;
+    var blocks = [];
+    for (var c = firstBlockCol; c < rowMetric.length; c += 5) {
+      var monat = rowMonat[c] != null ? rowMonat[c] : null;
+      var woche = rowWoche[c] != null ? rowWoche[c] : null;
+      var tag = rowTag[c] != null ? rowTag[c] : null;
+      var metricLabels = [0, 1, 2, 3, 4].map(function (k) { return String(rowMetric[c + k] || "").trim().toLowerCase(); });
+      var unknown = metricLabels.filter(function (l) { return l && !(l in METRIC_KEY_MAP); });
+      if (unknown.length) warnings.push("Unerwartete Metrik-Spaltennamen ab Spalte " + (c + 1) + ": " + unknown.join(", "));
+
+      var type = "UNBEKANNT", date = null;
+      if (woche == null && tag == null) type = "GESAMT";
+      else if (tag == null) type = "MONAT_SUMME";
+      else if (String(tag).trim().toLowerCase() === "ergebnis") type = "WOCHEN_SUMME";
+      else { date = parseGermanDate(String(tag)); type = date ? "TAG" : "UNBEKANNT"; }
+      blocks.push({ col: c, monat: monat, woche: woche, tag: tag, type: type, date: date });
+    }
+
+    var tagesBloecke = blocks.filter(function (b) { return b.type === "TAG"; });
+    var dates = tagesBloecke.map(function (b) { return b.date; }).filter(function (d) { return d != null; });
+    var years = Array.from(new Set(dates.map(function (d) { return d.getFullYear(); }))).sort();
+    var minDate = dates.length ? new Date(Math.min.apply(null, dates.map(function (d) { return d.getTime(); }))) : null;
+    var maxDate = dates.length ? new Date(Math.max.apply(null, dates.map(function (d) { return d.getTime(); }))) : null;
+    var wochenNummern = Array.from(new Set(blocks.filter(function (b) { return b.woche != null && b.type !== "GESAMT"; }).map(function (b) { return String(b.woche); })));
+
+    var markets = new Map();
+    var leafCount = 0, subtotalCount = 0, maskedMengeCount = 0;
+    var leafRows = [];
+
+    for (var r = 4; r < aoa.length; r++) {
+      var row = aoa[r];
+      if (!row) continue;
+      var markt = row[colMarkt];
+      if (markt == null || String(markt).trim() === "") continue;
+      var owg = row[colOwg] != null ? row[colOwg] : null;
+      var wg = row[colWg] != null ? row[colWg] : null;
+      var artikelNr = row[colArtikelNr] != null ? row[colArtikelNr] : null;
+      var artikelName = row[colArtikelName] != null ? row[colArtikelName] : null;
+      var gtin = colGtin >= 0 ? (row[colGtin] != null ? row[colGtin] : null) : null;
+
+      if (artikelName == null || String(artikelName).trim() === "") { subtotalCount++; continue; }
+      leafCount++;
+      markets.set(String(markt), (markets.get(String(markt)) || 0) + 1);
+
+      for (var bi = 0; bi < blocks.length; bi++) {
+        var b = blocks[bi];
+        if (b.type === "GESAMT") continue;
+        var mengeIdx = -1;
+        for (var k = 0; k < 5; k++) { if (String(rowMetric[b.col + k] || "").trim().toLowerCase() === "menge") { mengeIdx = k; break; } }
+        if (mengeIdx < 0) continue;
+        var val = row[b.col + mengeIdx];
+        if (val === "*") maskedMengeCount++;
+      }
+
+      leafRows.push({
+        rowIndex: r, markt: String(markt).trim(),
+        owg: owg != null ? String(owg).trim() : "", wg: wg != null ? String(wg).trim() : "",
+        artikel: String(artikelName).trim(), artikelnummer: artikelNr != null ? String(artikelNr).trim() : "",
+        gtin: gtin
+      });
+    }
+
+    return {
+      warnings: warnings, blocks: blocks, tagesBloecke: tagesBloecke, years: years, minDate: minDate, maxDate: maxDate, wochenNummern: wochenNummern,
+      markets: Array.from(markets.entries()).map(function (e) { return { name: e[0], count: e[1] }; }),
+      leafCount: leafCount, subtotalCount: subtotalCount, maskedMengeCount: maskedMengeCount,
+      totalDataRows: aoa.length - 4, leafRows: leafRows
+    };
+  }
+
+  // ==========================================================================
+  // Phase 1: Masterprodukt-Clustering
+  // ==========================================================================
+  function buildClusters(leafRows) {
+    var exactGroups = new Map();
+    leafRows.forEach(function (row) {
+      var norm = transliterate(row.artikel);
+      if (!exactGroups.has(norm)) exactGroups.set(norm, { originals: new Map(), owgwg: new Map() });
+      var g = exactGroups.get(norm);
+      if (!g.originals.has(row.artikel)) g.originals.set(row.artikel, { count: 0, nrs: new Set() });
+      var o = g.originals.get(row.artikel);
+      o.count += 1;
+      if (row.artikelnummer) o.nrs.add(row.artikelnummer);
+      var key = row.owg + "||" + row.wg;
+      g.owgwg.set(key, (g.owgwg.get(key) || 0) + 1);
+    });
+
+    var normNames = Array.from(exactGroups.keys());
+    var buckets = new Map();
+    normNames.forEach(function (n) {
+      var key = n.slice(0, 3);
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(n);
+    });
+
+    var parent = new Map(normNames.map(function (n) { return [n, n]; }));
+    function find(x) {
+      while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); }
+      return x;
+    }
+    function union(a, b) { var ra = find(a), rb = find(b); if (ra !== rb) parent.set(ra, rb); }
+
+    var SIM_THRESHOLD = 0.86;
+    var excludedByWeight = [];
+    buckets.forEach(function (list) {
+      for (var i = 0; i < list.length; i++) {
+        for (var j = i + 1; j < list.length; j++) {
+          if (list[i] === list[j]) continue;
+          var sim = similarity(list[i], list[j]);
+          if (sim < SIM_THRESHOLD) continue;
+          var qa = extractTrailingQuantity(list[i]), qb = extractTrailingQuantity(list[j]);
+          if (qa && qb && qa.value !== qb.value) {
+            excludedByWeight.push({ a: list[i], b: list[j], sim: Math.round(sim * 100) / 100 });
+            continue;
+          }
+          union(list[i], list[j]);
+        }
+      }
+    });
+
+    var merged = new Map();
+    normNames.forEach(function (n) {
+      var root = find(n);
+      if (!merged.has(root)) merged.set(root, { originals: new Map(), owgwg: new Map(), normVariants: new Set() });
+      var target = merged.get(root);
+      var src = exactGroups.get(n);
+      target.normVariants.add(n);
+      src.originals.forEach(function (info, o) {
+        if (!target.originals.has(o)) target.originals.set(o, { count: 0, nrs: new Set() });
+        var t = target.originals.get(o);
+        t.count += info.count;
+        info.nrs.forEach(function (nr) { t.nrs.add(nr); });
+      });
+      src.owgwg.forEach(function (c, k) { target.owgwg.set(k, (target.owgwg.get(k) || 0) + c); });
+    });
+
+    var candidates = [];
+    var id = 0;
+    merged.forEach(function (g) {
+      var originalsSorted = Array.from(g.originals.entries()).sort(function (a, b) { return b[1].count - a[1].count; });
+      var owgwgSorted = Array.from(g.owgwg.entries()).sort(function (a, b) { return b[1] - a[1]; });
+      var hasSpellingVariants = originalsSorted.length > 1;
+      var hasOwgWgConflict = owgwgSorted.length > 1;
+      if (!hasSpellingVariants && !hasOwgWgConflict) return;
+
+      var suggName = originalsSorted[0][0];
+      var suggKey = owgwgSorted[0][0];
+      var suggParts = suggKey.split("||"), suggOwg = suggParts[0], suggWg = suggParts[1];
+
+      var conflictType = "SPELLING";
+      if (hasSpellingVariants && hasOwgWgConflict) conflictType = "BOTH";
+      else if (hasOwgWgConflict) conflictType = "OWGWG";
+
+      var accepted = conflictType === "OWGWG";
+
+      candidates.push({
+        id: id++,
+        variants: originalsSorted.map(function (e) { return { name: e[0], count: e[1].count, nrs: Array.from(e[1].nrs) }; }),
+        owgwgOptions: owgwgSorted.map(function (e) { var p = e[0].split("||"); return { owg: p[0], wg: p[1], count: e[1] }; }),
+        suggestedName: suggName, suggestedOwg: suggOwg, suggestedWg: suggWg,
+        conflictType: conflictType, accepted: accepted,
+        editedName: suggName, editedOwg: suggOwg, editedWg: suggWg
+      });
+    });
+
+    candidates.sort(function (a, b) {
+      var totalA = a.variants.reduce(function (s, v) { return s + v.count; }, 0);
+      var totalB = b.variants.reduce(function (s, v) { return s + v.count; }, 0);
+      return totalB - totalA;
+    });
+
+    return { candidates: candidates, totalDistinct: normNames.length, totalClustersAfterMerge: merged.size, excludedByWeight: excludedByWeight };
+  }
+
+  // ==========================================================================
+  // Export: bereinigte Zuordnung + Entscheidungen als .xlsx
+  // ==========================================================================
+  function exportXlsx(leafRows, candidates) {
+    var nameOverride = new Map(), owgWgOverride = new Map();
+    candidates.forEach(function (c) {
+      if (!c.accepted) return;
+      c.variants.forEach(function (v) {
+        nameOverride.set(v.name, c.editedName);
+        if (c.conflictType === "OWGWG" || c.conflictType === "BOTH") owgWgOverride.set(v.name, { owg: c.editedOwg, wg: c.editedWg });
+      });
+    });
+
+    var bereinigungHeader = ["Originalbezeichnung", "Oberwarengruppe (Original)", "Warengruppe (Original)", "Masterprodukt (bereinigt)", "Oberwarengruppe (final)", "Warengruppe (final)", "GTIN"];
+    var bereinigungRows = leafRows.map(function (r) {
+      var finalName = nameOverride.get(r.artikel) || r.artikel;
+      var ow = owgWgOverride.get(r.artikel);
+      return [r.artikel, r.owg, r.wg, finalName, ow ? ow.owg : r.owg, ow ? ow.wg : r.wg, r.gtin != null ? r.gtin : ""];
+    });
+
+    var entscheidungenHeader = ["Paar-Schlüssel", "Varianten (Original)", "Konflikttyp", "Übernommen", "Zielprodukt", "Ziel-Oberwarengruppe", "Ziel-Warengruppe", "Gespeichert am"];
+    var now = new Date();
+    var timestamp = now.toISOString().slice(0, 19).replace("T", " ");
+    var entscheidungenRows = candidates.map(function (c) {
+      return [
+        c.variants.map(function (v) { return v.name; }).join("||"),
+        c.variants.map(function (v) { return v.name + " (" + v.count + ")"; }).join(" / "),
+        c.conflictType, c.accepted ? "JA" : "NEIN", c.editedName, c.editedOwg, c.editedWg, timestamp
+      ];
+    });
+
+    var wb = XLSX.utils.book_new();
+    var ws1 = XLSX.utils.aoa_to_sheet([bereinigungHeader].concat(bereinigungRows));
+    var ws2 = XLSX.utils.aoa_to_sheet([entscheidungenHeader].concat(entscheidungenRows));
+    ws1["!cols"] = [{ wch: 32 }, { wch: 24 }, { wch: 24 }, { wch: 32 }, { wch: 24 }, { wch: 24 }, { wch: 14 }];
+    ws2["!cols"] = [{ wch: 40 }, { wch: 45 }, { wch: 12 }, { wch: 11 }, { wch: 30 }, { wch: 24 }, { wch: 24 }, { wch: 18 }];
+    XLSX.utils.book_append_sheet(wb, ws1, "Masterprodukte");
+    XLSX.utils.book_append_sheet(wb, ws2, "Produktentscheidungen");
+
+    var out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    var blob = new Blob([out], { type: "application/octet-stream" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "Bereinigung_Phase1.xlsx";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ==========================================================================
+  // UI
+  // ==========================================================================
+  var PHASES = [
+    { n: 0, label: "Upload" }, { n: 1, label: "Bereinigung" }, { n: 2, label: "Mengenschätzung" },
+    { n: 3, label: "Tagesbasis" }, { n: 4, label: "Forecast" }, { n: 5, label: "Portfolio" },
+    { n: 6, label: "Produktionsplan" }, { n: 7, label: "Bestellung" }, { n: 8, label: "Export" }
+  ];
+
+  function fmtDate(d) { return d ? d.toLocaleDateString("de-DE") : "—"; }
+
+  function cxEl(tag, classStr, props, children) {
+    var mixed = cx(classStr);
+    var finalProps = Object.assign({}, props || {});
+    finalProps.className = (mixed.className + " " + (finalProps.className || "")).trim();
+    finalProps.style = Object.assign({}, mixed.style, finalProps.style || {});
+    return h.apply(null, [tag, finalProps].concat(children || []));
+  }
+
+  function StepDots(props) {
+    var active = props.active;
+    return cxEl("div", "flex flex-wrap gap-2", null, PHASES.map(function (p) {
+      var isActive = p.n === active, isDone = p.n < active;
+      var cls = "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-mono border " +
+        (isActive ? "bg-amber-700 border-amber-800 text-amber-50" : isDone ? "bg-stone-800 border-stone-800 text-stone-100" : "bg-stone-100 border-stone-300 text-stone-400");
+      return cxEl("div", cls, { key: p.n }, [
+        cxEl("span", "font-bold", null, [String(p.n).padStart(2, "0")]),
+        h("span", null, p.label)
+      ]);
+    }));
+  }
+
+  function StatTile(props) {
+    var tone = props.tone || "default";
+    var toneClasses = {
+      default: "border-stone-300 bg-stone-50 text-stone-900",
+      warn: "border-amber-400 bg-amber-50 text-amber-900",
+      danger: "border-red-300 bg-red-50 text-red-900",
+      ok: "border-emerald-300 bg-emerald-50 text-emerald-900"
+    };
+    return cxEl("div", "rounded-lg border px-4 py-3 " + toneClasses[tone], null, [
+      cxEl("div", "text-[11px] uppercase tracking-wide font-semibold opacity-70", null, [props.label]),
+      cxEl("div", "text-xl font-mono font-bold mt-0.5", null, [props.value])
+    ]);
+  }
+
+  function ConflictBadge(props) {
+    var map = {
+      SPELLING: { text: "Schreibweise", cls: "bg-stone-200 text-stone-700" },
+      OWGWG: { text: "OWG/WG-Konflikt", cls: "bg-amber-200 text-amber-900" },
+      BOTH: { text: "Schreibweise + OWG/WG", cls: "bg-red-200 text-red-900" }
+    };
+    var m = map[props.type] || map.SPELLING;
+    return cxEl("span", "px-2 py-0.5 rounded text-[11px] font-semibold " + m.cls, null, [m.text]);
+  }
+
+  function DecisionRow(props) {
+    var candidate = props.candidate, onChange = props.onChange;
+    var expandedState = useState(false);
+    var expanded = expandedState[0], setExpanded = expandedState[1];
+    var totalCount = candidate.variants.reduce(function (s, v) { return s + v.count; }, 0);
+
+    return cxEl("div", "border rounded-lg " + (candidate.accepted ? "border-stone-300 bg-white" : "border-stone-200 bg-stone-50 opacity-60"), null, [
+      cxEl("div", "flex items-start gap-3 p-3", { key: "row" }, [
+        h("input", {
+          key: "cb", type: "checkbox", checked: candidate.accepted,
+          onChange: function (e) { onChange(Object.assign({}, candidate, { accepted: e.target.checked })); },
+          className: "mt-1.5 h-4 w-4 accent-amber-700", "aria-label": "Übernehmen"
+        }),
+        cxEl("div", "flex-1 min-w-0", { key: "body" }, [
+          cxEl("div", "flex items-center gap-2 flex-wrap", { key: "head" }, [
+            h(ConflictBadge, { key: "badge", type: candidate.conflictType }),
+            cxEl("span", "text-xs text-stone-500 font-mono", { key: "cnt" }, [totalCount + " Datenzeilen betroffen"]),
+            cxEl("button", "ml-auto flex items-center gap-1 text-xs text-stone-500 hover:text-stone-800", {
+              key: "toggle", onClick: function () { setExpanded(function (e) { return !e; }); }
+            }, [
+              expanded ? h(IconChevronDown, { key: "i" }) : h(IconChevronRight, { key: "i" }),
+              " Details"
+            ])
+          ]),
+          cxEl("div", "mt-2 flex flex-wrap gap-1.5", { key: "variants" }, candidate.variants.map(function (v) {
+            return cxEl("span", "text-xs font-mono bg-stone-100 border border-stone-200 rounded px-1.5 py-0.5", {
+              key: v.name, title: v.nrs && v.nrs.length ? ("Artikelnr.: " + v.nrs.join(", ")) : undefined
+            }, [v.name + " ", cxEl("span", "text-stone-400", { key: "c" }, ["×" + v.count])]);
+          })),
+          cxEl("div", "mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2", { key: "fields" }, [
+            cxEl("label", "text-xs text-stone-500", { key: "f1" }, [
+              "Zielprodukt",
+              h("input", {
+                type: "text", value: candidate.editedName,
+                onChange: function (e) { onChange(Object.assign({}, candidate, { editedName: e.target.value })); },
+                className: "mt-0.5 w-full rounded border border-stone-300 px-2 py-1 text-sm font-mono"
+              })
+            ]),
+            cxEl("label", "text-xs text-stone-500", { key: "f2" }, [
+              "Ziel-Oberwarengruppe",
+              h("input", {
+                type: "text", value: candidate.editedOwg,
+                onChange: function (e) { onChange(Object.assign({}, candidate, { editedOwg: e.target.value })); },
+                disabled: candidate.conflictType === "SPELLING",
+                className: "mt-0.5 w-full rounded border border-stone-300 px-2 py-1 text-sm font-mono disabled:bg-stone-100 disabled:text-stone-400"
+              })
+            ]),
+            cxEl("label", "text-xs text-stone-500", { key: "f3" }, [
+              "Ziel-Warengruppe",
+              h("input", {
+                type: "text", value: candidate.editedWg,
+                onChange: function (e) { onChange(Object.assign({}, candidate, { editedWg: e.target.value })); },
+                disabled: candidate.conflictType === "SPELLING",
+                className: "mt-0.5 w-full rounded border border-stone-300 px-2 py-1 text-sm font-mono disabled:bg-stone-100 disabled:text-stone-400"
+              })
+            ])
+          ]),
+          (expanded && candidate.owgwgOptions.length > 1) ? cxEl("div", "mt-3 text-xs text-stone-600 bg-stone-50 border border-stone-200 rounded p-2", { key: "exp" }, [
+            cxEl("div", "font-semibold mb-1 flex items-center gap-1", { key: "t" }, [h(IconInfo, { key: "i", size: 12 }), " Gefundene OWG/WG-Kombinationen für dieses Produkt:"]),
+            cxEl("ul", "space-y-0.5 font-mono", { key: "l" }, candidate.owgwgOptions.map(function (o) {
+              return h("li", { key: o.owg + o.wg }, [
+                o.owg + " / " + o.wg + " — " + o.count + "× aufgetreten",
+                (o.owg === candidate.suggestedOwg && o.wg === candidate.suggestedWg) ? cxEl("span", "text-emerald-700 font-semibold", { key: "s" }, [" (häufigste, vorgeschlagen)"]) : null
+              ]);
+            }))
+          ]) : null
+        ])
+      ])
+    ]);
+  }
+
+  function App() {
+    var phaseState = useState(0); var phase = phaseState[0];
+    var fileNameState = useState(null); var fileName = fileNameState[0], setFileName = fileNameState[1];
+    var reportState = useState(null); var report = reportState[0], setReport = reportState[1];
+    var errorState = useState(null); var error = errorState[0], setError = errorState[1];
+    var candidatesState = useState(null); var candidates = candidatesState[0], setCandidates = candidatesState[1];
+    var clusterStatsState = useState(null); var clusterStats = clusterStatsState[0], setClusterStats = clusterStatsState[1];
+    var dragOverState = useState(false); var dragOver = dragOverState[0], setDragOver = dragOverState[1];
+    var setPhase = phaseState[1];
+    var inputRef = useRef(null);
+
+    // V2: Planungskontext + persistente Lernbasis
+    var viewState = useState("planung"); var view = viewState[0], setView = viewState[1];
+    var marketState = useState("NST"); var marketCode = marketState[0], setMarketCode = marketState[1];
+    var departmentState = useState("YBB"); var department = departmentState[0], setDepartment = departmentState[1];
+    var yearState = useState(new Date().getFullYear()); var targetYear = yearState[0], setTargetYear = yearState[1];
+    var weekState = useState(37); var targetWeek = weekState[0], setTargetWeek = weekState[1];
+    var factsState = useState([]); var dailyFacts = factsState[0], setDailyFacts = factsState[1];
+    var driveStateObj = useState({status:"unbekannt", message:""}); var driveState = driveStateObj[0], setDriveState = driveStateObj[1];
+    var saveState = useState(false); var savingDrive = saveState[0], setSavingDrive = saveState[1];
+
+    // V3: persistente Stammdaten / Produktzuordnung
+    var rawMasterState = useState([]); var rawMasterRows = rawMasterState[0], setRawMasterRows = rawMasterState[1];
+    var masterState = useState([]); var masterRows = masterState[0], setMasterRows = masterState[1];
+    var masterSearchState = useState(""); var masterSearch = masterSearchState[0], setMasterSearch = masterSearchState[1];
+    var masterOwgState = useState(""); var masterOwgFilter = masterOwgState[0], setMasterOwgFilter = masterOwgState[1];
+    var masterWgState = useState(""); var masterWgFilter = masterWgState[0], setMasterWgFilter = masterWgState[1];
+    var masterDiffState = useState(false); var onlyMasterDiff = masterDiffState[0], setOnlyMasterDiff = masterDiffState[1];
+    var masterStatusState = useState({status:"",message:""}); var masterStatus = masterStatusState[0], setMasterStatus = masterStatusState[1];
+    var masterSavingState = useState(false); var masterSaving = masterSavingState[0], setMasterSaving = masterSavingState[1];
+
+    var handleFile = useCallback(function (file) {
+      setError(null); setReport(null); setCandidates(null); setFileName(file.name);
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          var data = new Uint8Array(e.target.result);
+          var wb = XLSX.read(data, { type: "array" });
+          var sheetName = wb.SheetNames.find(function (n) { return n.toLowerCase().indexOf("kreuztabelle") >= 0 && n.toLowerCase().indexOf("metadaten") < 0; }) || wb.SheetNames[0];
+          var ws = wb.Sheets[sheetName];
+          var aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: null });
+          var parsed = parseKreuztabelle(aoa);
+          parsed.sheetName = sheetName;
+          parsed.availableSheets = wb.SheetNames;
+          setDailyFacts(extractDailyFacts(aoa, parsed));
+          var baseMasters = buildMasterRows(parsed.leafRows);
+          setRawMasterRows(baseMasters);
+          setMasterRows(baseMasters.filter(function(r){return r.department === department;}));
+          loadMasterData(baseMasters, department);
+          setReport(parsed);
+          setPhase(0);
+          var built = buildClusters(parsed.leafRows);
+          setCandidates(built.candidates);
+          setClusterStats({ totalDistinct: built.totalDistinct, totalClustersAfterMerge: built.totalClustersAfterMerge, totalLeafRows: parsed.leafRows.length, excludedByWeight: built.excludedByWeight });
+        } catch (err) {
+          setError(err.message || String(err));
+        }
+      };
+      reader.onerror = function () { setError("Datei konnte nicht gelesen werden."); };
+      reader.readAsArrayBuffer(file);
+    }, [marketCode, department]);
+
+    var onDrop = useCallback(function (e) {
+      e.preventDefault(); setDragOver(false);
+      var f = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) handleFile(f);
+    }, [handleFile]);
+
+    var acceptedCount = useMemo(function () { return candidates ? candidates.filter(function (c) { return c.accepted; }).length : 0; }, [candidates]);
+
+    function updateCandidate(updated) {
+      setCandidates(function (prev) { return prev.map(function (c) { return c.id === updated.id ? updated : c; }); });
+    }
+    function setAll(accepted) {
+      setCandidates(function (prev) { return prev.map(function (c) { return Object.assign({}, c, { accepted: accepted }); }); });
+    }
+
+
+    function loadMasterData(baseRows, dept) {
+      var d = dept || department;
+      setMasterStatus({status:"lädt", message:"Gespeicherte Stammdaten werden geladen…"});
+      apiJson("/api/drive?action=masterdata&market=" + encodeURIComponent(marketCode) + "&department=" + encodeURIComponent(d)).then(function(r){
+        var merged = mergeMasterRows(baseRows || rawMasterRows, r.records || [], d);
+        setMasterRows(merged);
+        setMasterStatus({status:"ok", message:(r.records || []).length + " gespeicherte Stammdatensätze geladen. " + merged.length + " Produkte aktuell verfügbar."});
+      }).catch(function(e){
+        setMasterRows((baseRows || rawMasterRows).filter(function(r){return r.department === d;}));
+        setMasterStatus({status:"fehler", message:e.message});
+      });
+    }
+
+    function updateMasterRow(key, patch) {
+      setMasterRows(function(prev){ return prev.map(function(r){
+        return r.key === key ? Object.assign({}, r, patch, {updatedAt:new Date().toISOString()}) : r;
+      });});
+    }
+
+    function resetMasterRow(key) {
+      setMasterRows(function(prev){ return prev.map(function(r){
+        if (r.key !== key) return r;
+        return Object.assign({}, r, {masterName:r.sourceName, targetOwg:r.sourceOwg, targetWg:r.sourceWg, updatedAt:new Date().toISOString()});
+      });});
+    }
+
+    function saveMasterData() {
+      setMasterSaving(true);
+      setMasterStatus({status:"lädt", message:"Stammdaten werden in Google Drive gespeichert…"});
+      apiJson("/api/drive", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"saveMasterData", market:marketCode, department:department, records:masterRows, savedAt:new Date().toISOString()})
+      }).then(function(r){
+        setMasterStatus({status:"ok", message:"Gespeichert: " + r.path + " (" + r.records + " Produkte)"});
+      }).catch(function(e){setMasterStatus({status:"fehler", message:e.message});})
+      .finally(function(){setMasterSaving(false);});
+    }
+
+    function checkDrive() {
+      setDriveState({status:"prüft", message:"Drive-Verbindung wird geprüft…"});
+      apiJson("/api/drive?action=status").then(function (r) {
+        setDriveState({status:"ok", message:"Verbunden: " + r.rootFolderName});
+      }).catch(function (e) {
+        setDriveState({status:"fehler", message:e.message});
+      });
+    }
+
+    async function saveLearningSnapshot() {
+      if (!report || !candidates) return;
+
+      setSavingDrive(true);
+      try {
+        var mappedFacts = applyMasterMappingsToFacts(dailyFacts, masterRows, department);
+        var CHUNK_SIZE = 300;
+        var totalChunks = Math.max(1, Math.ceil(mappedFacts.length / CHUNK_SIZE));
+        var uploadId = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+
+        var base = {
+          market: marketCode,
+          department: department,
+          targetYear: Number(targetYear),
+          targetWeek: Number(targetWeek),
+          uploadId: uploadId
+        };
+
+        setDriveState({status:"prüft", message:"Speicherung wird vorbereitet…"});
+        await apiJson("/api/drive", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify(Object.assign({}, base, {
+            action: "saveSapSnapshotInit",
+            sourceFileName: fileName || "SAP-Upload.xlsx",
+            uploadedAt: new Date().toISOString(),
+            totalRows: mappedFacts.length,
+            totalChunks: totalChunks,
+            report: {
+              sheetName: report.sheetName,
+              years: report.years,
+              minDate: report.minDate ? report.minDate.toISOString() : null,
+              maxDate: report.maxDate ? report.maxDate.toISOString() : null,
+              weeks: report.wochenNummern,
+              marketsDetected: report.markets,
+              leafCount: report.leafCount,
+              maskedMengeCount: report.maskedMengeCount,
+              warnings: report.warnings
+            },
+            masterDecisions: candidates.map(function (c) {
+              return {
+                variants: c.variants,
+                conflictType: c.conflictType,
+                accepted: c.accepted,
+                targetProduct: c.editedName,
+                targetOWG: c.editedOwg,
+                targetWG: c.editedWg
+              };
+            }),
+            masterDataVersion: 3
+          }))
+        });
+
+        for (var i = 0; i < totalChunks; i++) {
+          var start = i * CHUNK_SIZE;
+          var chunk = mappedFacts.slice(start, start + CHUNK_SIZE);
+          var done = Math.min(start + chunk.length, mappedFacts.length);
+          setDriveState({
+            status:"prüft",
+            message:"Speichere " + done + " von " + mappedFacts.length + " Datensätzen… (" + (i + 1) + "/" + totalChunks + ")"
+          });
+
+          await apiJson("/api/drive", {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify(Object.assign({}, base, {
+              action: "saveSapSnapshotChunk",
+              chunkIndex: i + 1,
+              rows: chunk
+            }))
+          });
+        }
+
+        setDriveState({status:"prüft", message:"Speicherung wird abgeschlossen…"});
+        var result = await apiJson("/api/drive", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify(Object.assign({}, base, {
+            action: "saveSapSnapshotFinalize"
+          }))
+        });
+
+        setDriveState({
+          status:"ok",
+          message:"Erfolgreich gespeichert: " + result.path + " (" + mappedFacts.length + " Datensätze)"
+        });
+      } catch (e) {
+        setDriveState({status:"fehler", message:e.message});
+      } finally {
+        setSavingDrive(false);
+      }
+    }
+
+    var children = [];
+
+    // Header
+    children.push(cxEl("div", "mb-6", { key: "header" }, [
+      cxEl("div", "flex items-baseline gap-3 flex-wrap", { key: "h1row" }, [
+        cxEl("h1", "font-serif text-3xl font-bold tracking-tight text-stone-900", { key: "h1" }, ["Backwaren-Planung"]),
+        cxEl("span", "font-mono text-xs text-stone-500 bg-white border border-stone-300 rounded px-2 py-0.5", { key: "badge" }, ["ELH · NST · OED"])
+      ]),
+      cxEl("p", "text-stone-600 text-sm mt-1 max-w-2xl", { key: "sub" }, ["V3.1 — Planungskontext, SAP-Import, persistente Lernbasis mit blockweiser Speicherung und bearbeitbare Stammdaten in Google Drive. Forecast und Sortiment werden als nächste Phasen darauf aufgebaut."]),
+      cxEl("div", "mt-4", { key: "dots" }, [h(StepDots, { active: phase })])
+    ]));
+
+    children.push(cxEl("div", "flex gap-2 mb-5 flex-wrap", {key:"nav"}, [
+      h("button", {className:"nav-btn " + (view === "planung" ? "active" : ""), onClick:function(){setView("planung");}}, "Planung"),
+      h("button", {className:"nav-btn " + (view === "daten" ? "active" : ""), onClick:function(){setView("daten");}}, "Daten-Upload"),
+      h("button", {className:"nav-btn " + (view === "stamm" ? "active" : ""), onClick:function(){setView("stamm"); loadMasterData(rawMasterRows, department);}}, "Stammdaten")
+    ]));
+
+    children.push(cxEl("div", "rounded-xl border border-stone-300 bg-white p-4 mb-6", {key:"context"}, [
+      cxEl("div", "font-serif text-xl font-bold mb-3", null, ["Planungskontext"]),
+      cxEl("div", "grid grid-cols-1 sm:grid-cols-4 gap-3", null, [
+        cxEl("label", "text-xs text-stone-500", null, ["Markt",
+          h("select", {value:marketCode, onChange:function(e){setMarketCode(e.target.value);}, className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"}, [
+            h("option",{value:"NST"},"NST"),
+            h("option",{value:"ELH"},"ELH"),
+            h("option",{value:"OED"},"OED"),
+            h("option",{value:"ANDERER"},"Anderer Markt")
+          ])
+        ]),
+        cxEl("label", "text-xs text-stone-500", null, ["Abteilung",
+          h("select", {value:department, onChange:function(e){setDepartment(e.target.value);}, className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"}, [
+            h("option",{value:"YBB"},"YBB — Bäckerei"),
+            h("option",{value:"YBA"},"YBA — Backoff")
+          ])
+        ]),
+        cxEl("label", "text-xs text-stone-500", null, ["Planjahr",
+          h("input", {type:"number", min:"2020", max:"2100", value:targetYear, onChange:function(e){setTargetYear(Number(e.target.value));}, className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"})
+        ]),
+        cxEl("label", "text-xs text-stone-500", null, ["Ziel-KW",
+          h("input", {type:"number", min:"1", max:"53", value:targetWeek, onChange:function(e){setTargetWeek(Number(e.target.value));}, className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"})
+        ])
+      ]),
+      cxEl("div", "mt-3 text-xs text-stone-500", null, ["Dieser Kontext gilt für Speicherung, spätere Sortimentsauswahl und Forecast. Der Daten-Cut für den Wochenforecast wird in der Forecast-Phase fest auf Mittwoch 23:59 Uhr gesetzt."])
+    ]));
+
+    if (view === "planung") {
+      children.push(cxEl("div", "grid grid-cols-1 sm:grid-cols-2 gap-4", {key:"planningHome"}, [
+        cxEl("div", "rounded-xl border border-stone-300 bg-white p-5", null, [
+          cxEl("div", "font-serif text-xl font-bold", null, ["Planwoche " + String(targetWeek).padStart(2,"0") + "/" + targetYear]),
+          cxEl("p", "text-sm text-stone-600 mt-2", null, ["Markt " + marketCode + " · " + department + ". In der nächsten Ausbaustufe werden hier Sortimentsauswahl, Forecast und Kapazitätssteuerung geladen."]),
+          cxEl("div", "mt-4 grid grid-cols-2 gap-2", null, [
+            cxEl("div", "rounded border border-stone-200 bg-stone-50 p-3 text-sm", null, ["1. Sortiment"]),
+            cxEl("div", "rounded border border-stone-200 bg-stone-50 p-3 text-sm", null, ["2. Forecast"]),
+            cxEl("div", "rounded border border-stone-200 bg-stone-50 p-3 text-sm", null, ["3. Produktionsplan"]),
+            cxEl("div", "rounded border border-stone-200 bg-stone-50 p-3 text-sm", null, ["4. Bestellung"])
+          ])
+        ]),
+        cxEl("div", "rounded-xl border border-stone-300 bg-white p-5", null, [
+          cxEl("div", "font-serif text-xl font-bold", null, ["Google-Drive Lernbasis"]),
+          cxEl("p", "text-sm text-stone-600 mt-2", null, ["Die App speichert bereinigte Wochen-Snapshots serverseitig in Forecast-App / Markt / Abteilung / SAP / Jahr / Plan_KW."]),
+          cxEl("button", "mt-4 text-xs font-semibold px-3 py-2 rounded border border-stone-300 bg-white", {onClick:checkDrive}, ["Drive-Verbindung prüfen"]),
+          driveState.message ? cxEl("div", "mt-3 text-xs " + (driveState.status==="fehler" ? "text-red-800" : driveState.status==="ok" ? "text-emerald-700" : "text-stone-500"), null, [driveState.message]) : null
+        ])
+      ]));
+    }
+
+    if (view === "daten") {
+
+    // Upload
+    children.push(cxEl("div", "rounded-xl border-2 border-dashed p-8 text-center transition-colors " + (dragOver ? "border-amber-600 bg-amber-50" : "border-stone-300 bg-white"), {
+      key: "upload",
+      onDragOver: function (e) { e.preventDefault(); setDragOver(true); },
+      onDragLeave: function () { setDragOver(false); },
+      onDrop: onDrop
+    }, [
+      h("input", {
+        key: "input", ref: inputRef, type: "file", accept: ".xlsx,.xlsm", className: "hidden",
+        onChange: function (e) { if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]); }
+      }),
+      cxEl("div", "mx-auto mb-2 text-stone-400 flex justify-center", { key: "icon" }, [h(IconUpload, { size: 28 })]),
+      cxEl("p", "text-stone-700 font-medium", { key: "t1" }, ["Kreuztabelle (.xlsx) hierher ziehen"]),
+      cxEl("p", "text-stone-500 text-sm mt-1", { key: "t2" }, [
+        "oder ",
+        cxEl("button", "text-amber-700 underline font-semibold", { key: "btn", onClick: function () { inputRef.current && inputRef.current.click(); } }, ["Datei auswählen"])
+      ]),
+      fileName ? cxEl("p", "text-xs text-stone-400 mt-3 font-mono", { key: "fn" }, ["Geladen: " + fileName]) : null
+    ]));
+
+    if (error) {
+      children.push(cxEl("div", "mt-4 rounded-lg border border-red-300 bg-red-50 text-red-800 p-4 flex gap-2 items-start", { key: "error" }, [
+        h(IconAlert, { key: "i", size: 18, className: "shrink-0 mt-0.5" }),
+        h("div", { key: "t" }, [
+          cxEl("div", "font-semibold text-sm", { key: "t1" }, ["Datei konnte nicht als Kreuztabelle erkannt werden"]),
+          cxEl("div", "text-sm mt-0.5", { key: "t2" }, [error])
+        ])
+      ]));
+    }
+
+    if (report) {
+      children.push(cxEl("div", "mt-8", { key: "report" }, [
+        cxEl("div", "flex items-center gap-2 mb-3", { key: "h" }, [
+          h(IconSheet, { key: "i", size: 18, className: "text-stone-500" }),
+          cxEl("h2", "font-serif text-xl font-bold", { key: "h2" }, ["Phase 0 — Validierungsbericht"]),
+          cxEl("span", "text-xs font-mono text-stone-400", { key: "s" }, ["Blatt: " + report.sheetName])
+        ]),
+        cxEl("div", "grid grid-cols-2 sm:grid-cols-4 gap-3", { key: "tiles" }, [
+          h(StatTile, { key: "1", label: "Datenzeilen gesamt", value: report.totalDataRows }),
+          h(StatTile, { key: "2", label: "Artikelzeilen (Leaf)", value: report.leafCount, tone: "ok" }),
+          h(StatTile, { key: "3", label: "Zwischensummen-Zeilen", value: report.subtotalCount }),
+          h(StatTile, { key: "4", label: "Maskierte Mengen (*)", value: report.maskedMengeCount, tone: report.maskedMengeCount > 0 ? "warn" : "ok" }),
+          h(StatTile, { key: "5", label: "Erkannte Märkte", value: report.markets.length }),
+          h(StatTile, { key: "6", label: "Erkannte Wochen", value: report.wochenNummern.length }),
+          h(StatTile, { key: "7", label: "Tagesblöcke gesamt", value: report.tagesBloecke.length }),
+          h(StatTile, { key: "8", label: "Zeitraum", value: fmtDate(report.minDate) + " – " + fmtDate(report.maxDate) })
+        ]),
+        cxEl("div", "mt-4 grid sm:grid-cols-2 gap-4", { key: "info" }, [
+          cxEl("div", "rounded-lg border border-stone-300 bg-white p-4", { key: "markets" }, [
+            cxEl("div", "text-xs uppercase tracking-wide font-semibold text-stone-500 mb-2", { key: "t" }, ["Märkte in dieser Datei"]),
+            cxEl("ul", "text-sm font-mono space-y-1", { key: "l" }, report.markets.map(function (m) {
+              return cxEl("li", "flex justify-between border-b border-stone-100 pb-1", { key: m.name }, [
+                h("span", { key: "n" }, m.name), cxEl("span", "text-stone-400", { key: "c" }, [m.count + " Zeilen"])
+              ]);
+            }))
+          ]),
+          cxEl("div", "rounded-lg border border-stone-300 bg-white p-4", { key: "years" }, [
+            cxEl("div", "text-xs uppercase tracking-wide font-semibold text-stone-500 mb-2", { key: "t" }, ["Jahre in Vergleichsdaten"]),
+            cxEl("p", "text-sm text-stone-700", { key: "p" }, [(report.years.length ? report.years.join(", ") : "keine Tagesdaten erkannt") + " — Vergleich erfolgt laut Exportstruktur über Kalenderwoche + Wochentag (nicht über das Datum selbst)."]),
+            report.warnings.length > 0 ? cxEl("div", "mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2", { key: "w" }, report.warnings.map(function (w, i) { return h("div", { key: i }, "⚠ " + w); })) : null
+          ])
+        ]),
+        cxEl("div", "mt-4 rounded-lg border border-stone-300 bg-white p-4 text-sm", {key:"deptsplit"}, [
+          cxEl("div", "font-semibold", null, ["Automatische Abteilungstrennung"]),
+          cxEl("div", "mt-1 text-stone-600", null, [
+            "YBA (Backoff) = OWG BAKE OFF / TK-BAKE OFF. Alle übrigen Marktbäckerei-OWG werden YBB zugeordnet. Aktuell im Upload: YBB ",
+            String(rawMasterRows.filter(function(r){return r.department==="YBB";}).length), " Produkte · YBA ",
+            String(rawMasterRows.filter(function(r){return r.department==="YBA";}).length), " Produkte."
+          ])
+        ])
+      ]));
+    }
+
+    if (candidates) {
+      children.push(cxEl("div", "mt-10", { key: "phase1" }, [
+        cxEl("div", "flex items-center gap-2 mb-1", { key: "h" }, [
+          h(IconCheck, { key: "i", size: 18, className: "text-stone-500" }),
+          cxEl("h2", "font-serif text-xl font-bold", { key: "h2" }, ["Phase 1 — Bereinigung & Masterprodukte"])
+        ]),
+        cxEl("p", "text-sm text-stone-600 mb-4", { key: "desc" }, [
+          clusterStats.totalDistinct + " unterschiedliche Artikel-Schreibweisen gefunden → " + clusterStats.totalClustersAfterMerge + " Masterprodukte nach automatischer Vor-Gruppierung. ",
+          h("strong", { key: "b" }, candidates.length), " davon brauchen eine Entscheidung (Rechtschreibvariante und/oder abweichende Oberwarengruppe/Warengruppe über die Zeit). Alles andere ist bereits eindeutig und wird unverändert übernommen."
+        ]),
+        clusterStats.excludedByWeight.length > 0 ? cxEl("div", "mb-4 text-xs text-stone-600 bg-white border border-stone-200 rounded-lg p-3", { key: "excl" }, [
+          cxEl("div", "font-semibold text-stone-700 mb-1 flex items-center gap-1", { key: "t" }, [h(IconInfo, { key: "i", size: 13 }), " " + clusterStats.excludedByWeight.length + " ähnliche Namenspaare bewusst NICHT vorgeschlagen"]),
+          cxEl("p", "mb-1.5", { key: "p" }, ["Diese Paare unterscheiden sich nur durch eine abweichende Gebindegröße/Menge am Ende der Bezeichnung — das deutet auf tatsächlich unterschiedliche Artikel hin (nicht auf einen Schreibfehler), deshalb keine automatische Zusammenführung:"]),
+          cxEl("ul", "font-mono space-y-0.5 max-h-28 overflow-y-auto", { key: "l" }, clusterStats.excludedByWeight.map(function (p, i) {
+            return cxEl("li", "text-stone-500", { key: i }, [p.a + " ↔ " + p.b]);
+          }))
+        ]) : null,
+        candidates.length === 0 ? cxEl("div", "rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 p-4 text-sm", { key: "none" }, ["Keine offenen Fälle — alle Artikel sind eindeutig einem Masterprodukt und einer Oberwarengruppe/Warengruppe zugeordnet."]) :
+          h("div", { key: "list" }, [
+            cxEl("div", "flex gap-2 mb-3", { key: "actions" }, [
+              cxEl("button", "text-xs font-semibold px-3 py-1.5 rounded border border-stone-300 bg-white hover:bg-stone-50", { key: "all", onClick: function () { setAll(true); } }, ["Alle übernehmen"]),
+              cxEl("button", "text-xs font-semibold px-3 py-1.5 rounded border border-stone-300 bg-white hover:bg-stone-50 flex items-center gap-1", { key: "none", onClick: function () { setAll(false); } }, [h(IconReset, { key: "i", size: 12 }), " Alle zurücksetzen"]),
+              cxEl("span", "ml-auto text-xs text-stone-500 self-center font-mono", { key: "cnt" }, [acceptedCount + " / " + candidates.length + " übernommen"])
+            ]),
+            cxEl("div", "space-y-2", { key: "rows" }, candidates.map(function (c) { return h(DecisionRow, { key: c.id, candidate: c, onChange: updateCandidate }); }))
+          ]),
+        cxEl("div", "mt-6 flex items-center gap-3", { key: "export" }, [
+          cxEl("button", "flex items-center gap-2 bg-amber-700 hover:bg-amber-800 text-amber-50 font-semibold px-4 py-2.5 rounded-lg text-sm", {
+            key: "btn", onClick: function () { exportXlsx(report.leafRows, candidates); }
+          }, [h(IconDownload, { key: "i", size: 16 }), " Bereinigung als .xlsx exportieren"]),
+          cxEl("span", "text-xs text-stone-500", { key: "hint" }, ["Enthält Blatt „Masterprodukte\u201c (alle " + report.leafCount + " Artikelzeilen mit finaler Zuordnung) und „Produktentscheidungen\u201c (Protokoll aller getroffenen Entscheidungen)."])
+        ])
+      ]));
+    }
+
+    if (report && candidates) {
+      children.push(cxEl("div", "mt-6 rounded-xl border border-stone-300 bg-white p-4", {key:"driveSave"}, [
+        cxEl("div", "font-serif text-xl font-bold", null, ["Lernbasis speichern"]),
+        cxEl("p", "text-sm text-stone-600 mt-1", null, [
+          "Speichert den bereinigten SAP-Snapshot für ", h("strong",null,marketCode + " · " + department + " · Plan KW " + targetWeek + "/" + targetYear),
+          " in Google Drive. Bereits vorhandene Wochen werden nicht als zusätzliche Forecast-Gewichte gezählt; die Historie wird später nach Datum/KW ausgewertet."
+        ]),
+        cxEl("div", "mt-3 flex gap-2 items-center flex-wrap", null, [
+          cxEl("button", "bg-amber-700 text-amber-50 font-semibold px-4 py-2.5 rounded-lg text-sm", {
+            disabled:savingDrive, onClick:saveLearningSnapshot
+          }, [savingDrive ? "Speichert…" : "In Google Drive als Lernbasis speichern"]),
+          cxEl("button", "text-xs font-semibold px-3 py-2 rounded border border-stone-300 bg-white", {onClick:checkDrive}, ["Drive prüfen"])
+        ]),
+        driveState.message ? cxEl("div", "mt-3 text-xs " + (driveState.status==="fehler" ? "text-red-800" : driveState.status==="ok" ? "text-emerald-700" : "text-stone-500"), null, [driveState.message]) : null
+      ]));
+    }
+
+    } // Ende Daten-Upload
+
+    if (view === "stamm") {
+      var owgValues = Array.from(new Set(masterRows.map(function(r){return r.targetOwg || "";}).filter(Boolean))).sort(function(a,b){return a.localeCompare(b,"de");});
+      var wgValues = Array.from(new Set(masterRows.filter(function(r){return !masterOwgFilter || r.targetOwg === masterOwgFilter;}).map(function(r){return r.targetWg || "";}).filter(Boolean))).sort(function(a,b){return a.localeCompare(b,"de");});
+      var q = transliterate(masterSearch);
+      var filteredMasters = masterRows.filter(function(r){
+        if (masterOwgFilter && r.targetOwg !== masterOwgFilter) return false;
+        if (masterWgFilter && r.targetWg !== masterWgFilter) return false;
+        if (onlyMasterDiff && r.masterName === r.sourceName && r.targetOwg === r.sourceOwg && r.targetWg === r.sourceWg) return false;
+        if (q) {
+          var hay = transliterate([r.masterName,r.sourceName,r.targetOwg,r.targetWg,r.artikelnummer,r.gtin].join(" "));
+          if (hay.indexOf(q) < 0) return false;
+        }
+        return true;
+      });
+      var visibleMasters = filteredMasters.slice(0, 200);
+
+      children.push(cxEl("div", "rounded-xl border border-stone-300 bg-white p-5", {key:"masterEditor"}, [
+        cxEl("div", "flex items-start justify-between gap-3 flex-wrap", null, [
+          h("div", null, [
+            cxEl("div", "font-serif text-xl font-bold", null, ["Stammdaten / Produktzuordnung — " + marketCode + " · " + department]),
+            cxEl("p", "text-sm text-stone-600 mt-1", null, ["SAP-Original bleibt unverändert. Hier wird die fachliche Master-Zuordnung gespeichert. Beim nächsten Upload derselben Artikelnummer wird diese Zuordnung automatisch wieder verwendet."])
+          ]),
+          cxEl("div", "flex gap-2", null, [
+            cxEl("button", "text-xs font-semibold px-3 py-2 rounded border border-stone-300 bg-white", {onClick:function(){loadMasterData(rawMasterRows, department);}}, ["Neu laden"]),
+            cxEl("button", "bg-amber-700 text-amber-50 font-semibold px-4 py-2 rounded-lg text-sm", {disabled:masterSaving, onClick:saveMasterData}, [masterSaving ? "Speichert…" : "Stammdaten speichern"])
+          ])
+        ]),
+        masterStatus.message ? cxEl("div", "mt-3 text-xs " + (masterStatus.status==="fehler" ? "text-red-800" : masterStatus.status==="ok" ? "text-emerald-700" : "text-stone-500"), null, [masterStatus.message]) : null,
+        cxEl("div", "mt-5 grid grid-cols-1 sm:grid-cols-4 gap-3", null, [
+          cxEl("label", "text-xs text-stone-500", null, ["Suche Produkt / Artikelnummer",
+            h("input", {type:"text", value:masterSearch, onChange:function(e){setMasterSearch(e.target.value);}, placeholder:"z. B. Cappuccino oder Brezel", className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"})
+          ]),
+          cxEl("label", "text-xs text-stone-500", null, ["Oberwarengruppe",
+            h("select", {value:masterOwgFilter, onChange:function(e){setMasterOwgFilter(e.target.value);setMasterWgFilter("");}, className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"}, [h("option",{value:""},"Alle OWG")].concat(owgValues.map(function(v){return h("option",{key:v,value:v},v);})))
+          ]),
+          cxEl("label", "text-xs text-stone-500", null, ["Warengruppe",
+            h("select", {value:masterWgFilter, onChange:function(e){setMasterWgFilter(e.target.value);}, className:"mt-1 w-full rounded border border-stone-300 px-2 py-2"}, [h("option",{value:""},"Alle WG")].concat(wgValues.map(function(v){return h("option",{key:v,value:v},v);})))
+          ]),
+          cxEl("label", "text-xs text-stone-500 flex items-center gap-2 pt-6", null, [
+            h("input", {type:"checkbox", checked:onlyMasterDiff, onChange:function(e){setOnlyMasterDiff(e.target.checked);}}), "Nur geänderte Zuordnungen"
+          ])
+        ]),
+        cxEl("div", "mt-3 text-xs text-stone-500", null, [filteredMasters.length + " Treffer. Maximal 200 werden gleichzeitig angezeigt. Für größere Gruppen bitte OWG/WG oder Suche verwenden."]),
+        cxEl("div", "mt-3 overflow-y-auto border border-stone-200 rounded-lg", {style:{maxHeight:"620px"}}, [
+          h("table", {className:"master-table w-full text-sm"}, [
+            h("thead", null, h("tr", null, [
+              h("th",null,"Artikel / Nr."), h("th",null,"SAP-Original"), h("th",null,"Masterprodukt"), h("th",null,"Ziel-OWG"), h("th",null,"Ziel-WG"), h("th",null,"Aktion")
+            ])),
+            h("tbody", null, visibleMasters.map(function(r){
+              var changed = r.masterName !== r.sourceName || r.targetOwg !== r.sourceOwg || r.targetWg !== r.sourceWg;
+              return h("tr", {key:r.key, style:changed ? {backgroundColor:"#fffbeb"} : null}, [
+                h("td", null, [h("div",{style:{fontWeight:600}},r.sourceName), h("div",{style:{fontSize:"11px",color:"#78716c"}},r.artikelnummer || r.gtin || r.key)]),
+                h("td", null, [h("div",{style:{fontSize:"11px"}},r.sourceOwg), h("div",{style:{fontSize:"11px",color:"#78716c",marginTop:"4px"}},r.sourceWg)]),
+                h("td", null, h("input", {value:r.masterName || "", onChange:function(e){updateMasterRow(r.key,{masterName:e.target.value});}})),
+                h("td", null, h("input", {className:"small-input", value:r.targetOwg || "", onChange:function(e){updateMasterRow(r.key,{targetOwg:e.target.value});}})),
+                h("td", null, h("input", {className:"small-input", value:r.targetWg || "", onChange:function(e){updateMasterRow(r.key,{targetWg:e.target.value});}})),
+                h("td", null, cxEl("button", "text-xs font-semibold px-2 py-1 rounded border border-stone-300 bg-white", {onClick:function(){resetMasterRow(r.key);}}, ["Original"] ))
+              ]);
+            }))
+          ])
+        ]),
+        cxEl("div", "mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900", null, ["Beispiel: Cappuccino Groß aus TK-Kleingebäck nach GASTRONOMIE MARKTKÜCHE / HEIßGETRÄNKE verschieben und speichern. Beim nächsten SAP-Upload bleibt die SAP-Zeile im Original erhalten, Forecast und Planung verwenden aber automatisch die gespeicherte Master-Zuordnung."])
+      ]));
+    }
+
+    children.push(cxEl("div", "mt-12 pt-4 border-t border-stone-300 text-xs text-stone-400", { key: "footer" }, [
+      "V3 Basis: SAP-Import + Google-Drive-Lernbasis + persistente Stammdaten/Produktzuordnung. Nächster Schritt: Sortimentsauswahl je Markt/Abteilung/KW und danach Forecast."
+    ]));
+
+    return cxEl("div", "min-h-screen bg-stone-100 text-stone-900 font-sans", null, [
+      cxEl("div", "max-w-5xl mx-auto px-4 py-8", { key: "inner" }, children)
+    ]);
+  }
+
+  document.getElementById("root").setAttribute("data-mounted", "true");
+  ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+})();
+</script>
+</body>
+</html>

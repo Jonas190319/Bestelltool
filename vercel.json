@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "api/drive.js": { "maxDuration": 30 },
+    "api/google/connect.js": { "maxDuration": 30 },
+    "api/google/callback.js": { "maxDuration": 30 }
+  },
+  "headers": [
+    {
+      "source": "/",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
+      "source": "/index.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    }
+  ]
+}
